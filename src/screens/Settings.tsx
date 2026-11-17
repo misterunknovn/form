@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useNav } from '../App'
 import { useData } from '../data/store'
-import { exportBackup, importBackup, planHistory, savePlan, undoPlan, updateSettings, type Backup } from '../data/db'
+import { countExisting, exportBackup, importBackup, planHistory, saveActivities, savePlan, undoPlan, updateSettings, type Backup } from '../data/db'
+import { importCsv, summarize, type CsvImport } from '../lib/importCsv'
 import type { Plan } from '../data/types'
 import { Card, CardHead, FullSheet } from '../components/ui'
 import { buildClaudeExport, diffPlans, extractJson, validatePlan, type PlanDiff } from '../lib/claude'
@@ -179,6 +180,23 @@ export async function runBackup(toast: (m: string) => void) {
 export function SettingsCard() {
   const { toast, plan } = useData()
   const fileRef = useRef<HTMLInputElement>(null)
+  const csvRef = useRef<HTMLInputElement>(null)
+  const [csv, setCsv] = useState<CsvPreview[] | null>(null)
+
+  const readCsv = async (files: FileList | null) => {
+    if (!files?.length) return
+    const out: CsvPreview[] = []
+    for (const f of Array.from(files)) {
+      try {
+        const r = importCsv(await f.text())
+        out.push({ file: f.name, result: r, existing: await countExisting(r.activities.map((a) => a.id)) })
+      } catch (e) {
+        out.push({ file: f.name, error: (e as Error).message })
+      }
+    }
+    setCsv(out)
+    if (csvRef.current) csvRef.current.value = ''
+  }
   const [history, setHistory] = useState<{ note: string; savedAt: number }[] | null>(null)
 
   const restore = async (f?: File) => {
@@ -205,11 +223,14 @@ export function SettingsCard() {
     <Card>
       <CardHead title="Einstellungen" />
       <div className="rows" style={{ marginTop: 6 }}>
+        <SettingRow label="Daten importieren (CSV)" sub="Kraft aus Hevy, Läufe aus dem Lauftracker" onClick={() => csvRef.current?.click()} />
         <SettingRow label="Sicherung exportieren" sub="Alle Daten als Datei, z. B. in iCloud Drive" onClick={() => runBackup(toast)} />
         <SettingRow label="Sicherung importieren" sub="Ersetzt alle Daten auf diesem Gerät" onClick={() => fileRef.current?.click()} />
         <SettingRow label="Plan-Verlauf" sub={`Aktuell: ${plan.name}, Stand ${fmtDate(plan.updated)}`} onClick={showHistory} />
       </div>
       <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(x) => restore(x.target.files?.[0])} />
+      <input ref={csvRef} type="file" accept=".csv,text/csv,text/plain" multiple hidden onChange={(x) => readCsv(x.target.files)} />
+      {csv && <CsvSheet previews={csv} onClose={() => setCsv(null)} />}
       {history && (
         <div style={{ marginTop: 8 }}>
           {history.length === 0 ? (
@@ -256,5 +277,65 @@ export function BackupReminder() {
       </div>
       <button className="pill today" onClick={() => runBackup(toast)}>Sichern</button>
     </div>
+  )
+}
+
+// ---------------- CSV-Import ----------------
+
+interface CsvPreview {
+  file: string
+  result?: CsvImport
+  existing?: number
+  error?: string
+}
+
+function CsvSheet({ previews, onClose }: { previews: CsvPreview[]; onClose: () => void }) {
+  const { toast } = useData()
+  const [busy, setBusy] = useState(false)
+  const all = previews.flatMap((p) => p.result?.activities ?? [])
+
+  const run = async () => {
+    setBusy(true)
+    const r = await saveActivities(all)
+    setBusy(false)
+    toast(`${r.added} Einheiten importiert${r.updated ? `, ${r.updated} aktualisiert` : ''}`)
+    onClose()
+  }
+
+  return (
+    <FullSheet
+      title="Daten importieren"
+      onClose={onClose}
+      footer={<button className="btn-primary" disabled={!all.length || busy} onClick={run}>{all.length ? `${all.length} Einheiten importieren` : 'Nichts zu importieren'}</button>}
+    >
+      <div className="hint" style={{ fontSize: 12 }}>
+        Bereits importierte Einheiten werden aktualisiert, nicht doppelt angelegt. In Form selbst erfasste Einträge bleiben unverändert.
+      </div>
+      {previews.map((p) => {
+        const s = p.result ? summarize(p.result.activities) : null
+        return (
+          <div key={p.file} className="card" style={{ margin: '12px 0 0' }}>
+            <CardHead title={p.result ? (p.result.format === 'hevy' ? 'Hevy · Krafttraining' : 'Lauftracker · Läufe') : 'Nicht lesbar'} aside={p.file} />
+            {p.error && <div className="error" style={{ margin: '8px 0 0' }}>{p.error}</div>}
+            {s && p.result && (
+              <>
+                <div className="rows" style={{ marginTop: 8 }}>
+                  {s.strength > 0 && <Line l="Krafteinheiten" v={String(s.strength)} />}
+                  {s.runs > 0 && <Line l="Läufe" v={String(s.runs)} />}
+                  {s.tests > 0 && <Line l="Leistungstests" v={String(s.tests)} />}
+                  {s.from && <Line l="Zeitraum" v={`${fmtDate(s.from)} – ${fmtDate(s.to!)}`} />}
+                  {!!p.existing && <Line l="Schon vorhanden" v={`${p.existing} (werden aktualisiert)`} />}
+                </div>
+                {p.result.warnings.length > 0 && (
+                  <div className="error" style={{ margin: '10px 0 0' }}>
+                    {p.result.warnings.map((w) => <div key={w}>{w}</div>)}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )
+      })}
+    </FullSheet>
   )
 }

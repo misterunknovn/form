@@ -26,13 +26,16 @@ export function RunForm({ date, planned, edit }: { date?: ISODate; planned?: Pla
     e ? (e.kind === 'bike' ? 'rad' : e.runType) : planned?.kind === 'bike' ? 'rad' : planned?.runType && planned.runType !== 'test' ? planned.runType : 'easy',
   )
   const [day, setDay] = useState<ISODate>(e?.date ?? date ?? today)
-  const [dist, setDist] = useState(e?.kind === 'run' ? fmtKm(e.distanceKm) : '')
-  const [dur, setDur] = useState(e ? fmtDuration(e.durationSec) : '')
+  const [dist, setDist] = useState(e?.kind === 'run' && e.distanceKm ? fmtKm(e.distanceKm) : '')
+  const [dur, setDur] = useState(e?.durationSec ? fmtDuration(e.durationSec) : '')
   const [hr, setHr] = useState(e?.avgHr ? String(e.avgHr) : '')
   const [effort, setEffort] = useState(e?.kind === 'run' ? e.effort ?? 3 : 3)
   const [shoeId, setShoeId] = useState(e?.kind === 'run' ? e.shoeId ?? '' : shoes.find((s) => !s.retired)?.id ?? '')
   const [note, setNote] = useState(e?.note ?? '')
   const [source, setSource] = useState<RunActivity['source']>(e?.kind === 'run' ? e.source : 'manuell')
+  const [setting, setSetting] = useState<RunActivity['setting']>(e?.kind === 'run' ? e.setting : undefined)
+  const [pain, setPain] = useState(e?.kind === 'run' && e.pain !== undefined ? String(e.pain) : '')
+  const [painNote, setPainNote] = useState(e?.kind === 'run' ? e.painNote ?? '' : '')
   const [err, setErr] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -41,7 +44,10 @@ export function RunForm({ date, planned, edit }: { date?: ISODate; planned?: Pla
   const sec = parseDuration(dur)
   const pace = km && sec ? sec / km : null
   const plannedToday = sessionsOn(plan, day).find((s) => (isBike ? s.kind === 'bike' : s.kind === 'run'))
-  const valid = isBike ? !!sec : !!km && !!sec && km > 0 && sec > 0
+  // Importierte Läufe dürfen unbekannte Distanz/Dauer behalten (z. B. Intervalle nur mit Tempo@Puls)
+  const unknownKmOk = e?.kind === 'run' && !e.distanceKm && dist.trim() === ''
+  const unknownDurOk = e?.kind === 'run' && !e.durationSec && dur.trim() === ''
+  const valid = isBike ? !!sec : (!!km && km > 0 || unknownKmOk) && (!!sec || unknownDurOk)
 
   const onFile = async (f?: File) => {
     if (!f) return
@@ -60,22 +66,29 @@ export function RunForm({ date, planned, edit }: { date?: ISODate; planned?: Pla
   }
 
   const save = async () => {
-    if (!valid || !sec) return
+    if (!valid) return
     const base = { id: e?.id ?? uid(), date: day, createdAt: e?.createdAt ?? Date.now(), note: note.trim() || undefined, planned: plannedToday?.title }
     const avgHr = hr ? Number(hr) || undefined : undefined
     if (isBike) {
-      await saveActivity({ ...base, kind: 'bike', durationSec: sec, avgHr })
+      await saveActivity({ ...base, kind: 'bike', durationSec: sec ?? 0, avgHr })
     } else {
       const title = plannedToday?.runType === type && plannedToday.steps?.find((s) => s.key)?.name
+      const keep = e?.kind === 'run' ? e : undefined // importierte Zusatzdaten (Intervalle, Schwelle …) behalten
+      const painN = pain === '' ? undefined : Math.min(10, Number(pain))
       await saveActivity({
+        ...keep,
         ...base,
         kind: 'run',
+        setting,
+        pain: painN,
+        painNote: painN ? painNote.trim() || undefined : undefined,
         runType: type,
         title: (e?.kind === 'run' ? e.title : undefined) ?? (title || undefined),
-        distanceKm: km!,
-        durationSec: sec,
+        distanceKm: km ?? 0,
+        durationSec: sec ?? 0,
         avgHr,
         effort,
+        rpe: keep?.effort === effort ? keep?.rpe : undefined,
         shoeId: shoeId || undefined,
         source,
       })
@@ -157,6 +170,29 @@ export function RunForm({ date, planned, edit }: { date?: ISODate; planned?: Pla
           </div>
         )}
       </div>
+
+      {!isBike && (
+        <>
+          <div className="form-label">Umgebung</div>
+          <div className="chips">
+            {(['draussen', 'laufband'] as const).map((x) => (
+              <button key={x} className={`chip ${setting === x ? 'on' : ''}`} onClick={() => setSetting(setting === x ? undefined : x)}>{x === 'draussen' ? 'Draußen' : 'Laufband'}</button>
+            ))}
+          </div>
+          <div className="list-box">
+            <div className="list-row">
+              <label htmlFor="pain">Schmerz (0–10)</label>
+              <input id="pain" inputMode="numeric" placeholder="0" value={pain} onChange={(x) => setPain(x.target.value.replace(/\D/g, '').slice(0, 2))} />
+            </div>
+            {Number(pain) > 0 && (
+              <div className="list-row">
+                <label htmlFor="painnote">Wo?</label>
+                <input id="painnote" placeholder="z. B. linke Ferse" value={painNote} onChange={(x) => setPainNote(x.target.value)} />
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="list-box">
         <div className="list-row">

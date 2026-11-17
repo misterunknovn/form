@@ -4,9 +4,9 @@ import { useData } from '../data/store'
 import type { Activity, PlannedSession } from '../data/types'
 import { Card, CardHead, CardLink, Empty, FullSheet, ProgressBar } from './ui'
 import { DAY_SHORT, dateForWeekday, fmtDate, fmtDayShort } from '../lib/dates'
-import { fmtDuration, fmtKg, fmtKm, fmtPace } from '../lib/format'
+import { fmtDuration, fmtKg, fmtKm, fmtKmh, fmtPace } from '../lib/format'
 import { aRace, phaseFor, plannedSetsTotal, weekFor, weekIndex, workoutById } from '../lib/plan'
-import { byDateDesc, countSets, sessionLoad } from '../lib/stats'
+import { byDateDesc, countSets, effectiveHr, effectivePace, sessionLoad } from '../lib/stats'
 import { WEEKDAYS } from '../data/types'
 import { diffDays } from '../lib/dates'
 
@@ -84,15 +84,20 @@ export function CurrentPlanCard({ kind, onPlan }: { kind: 'run' | 'strength'; on
 
 export function activityLine(a: Activity, shoesById?: Map<string, string>) {
   switch (a.kind) {
-    case 'run':
+    case 'run': {
+      const p = effectivePace(a)
+      const hr = effectiveHr(a)
+      const speed = a.runType === 'intervall' && a.intervals?.length && p ? fmtKmh(3600 / p) : p ? `${fmtPace(p)} /km` : ''
+      const extra = [a.setting === 'laufband' ? 'Laufband' : '', a.pain ? `Schmerz ${a.pain}/10` : ''].filter(Boolean).join(' · ')
       return {
         t: a.title ? `${runName(a.runType)} ${a.title}` : runName(a.runType),
-        s: `${fmtDayShort(a.date)}${a.shoeId && shoesById?.get(a.shoeId) ? ` · ${shoesById.get(a.shoeId)}` : ''}`,
-        v: fmtKm(a.distanceKm),
-        u: 'km',
-        vs: `${fmtPace(a.durationSec / a.distanceKm)} /km${a.avgHr ? ` · ${a.avgHr} bpm` : ''}`,
-        color: 'var(--run)',
+        s: `${fmtDayShort(a.date)}${a.shoeId && shoesById?.get(a.shoeId) ? ` · ${shoesById.get(a.shoeId)}` : ''}${extra ? ` · ${extra}` : ''}`,
+        v: a.distanceKm ? fmtKm(a.distanceKm) : '–',
+        u: a.distanceKm ? 'km' : '',
+        vs: [speed, hr ? `${hr} bpm` : ''].filter(Boolean).join(' · ') || '–',
+        color: a.pain ? 'var(--warn)' : 'var(--run)',
       }
+    }
     case 'test':
       return { t: `Leistungstest ${fmtKm(a.distanceKm)} km`, s: fmtDayShort(a.date), v: fmtDuration(a.durationSec), u: '', vs: `VDOT ${a.vdot.toFixed(1).replace('.', ',')}`, color: 'var(--run-light)' }
     case 'bike':

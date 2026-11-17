@@ -34,7 +34,7 @@ function buildExercises(plan: Plan, workoutId: string, planned: PlannedSession |
     .filter((e) => !e.optional)
     .map((e) => {
       const n = plannedSets(e.sets, planned?.workoutId === workoutId ? planned : undefined)
-      const last = lastExercise(acts, e.name, day)
+      const last = lastExercise(acts, e.name, day, e.aliases)
       const rows: Row[] = Array.from({ length: n }, (_, i) => {
         const l = last?.sets[Math.min(i, last.sets.length - 1)]
         return { reps: l ? String(l.reps) : firstNum(e.reps), kg: l ? fmtKg(l.kg) : '', rir: firstNum(e.rir) }
@@ -169,7 +169,8 @@ export function StrengthForm({ date, planned, edit }: { date?: ISODate; planned?
       {exs.map((x, i) => {
         const filled = x.rows.filter(counts)
         const top = topSet(filled.map((r) => ({ reps: Number(r.reps), kg: parseDecimal(r.kg) ?? 0 })))
-        const last = lastExercise(activities, x.name, day)
+        const tpl = plan.workouts.flatMap((w) => w.exercises).find((t) => t.name === x.name)
+        const last = lastExercise(activities, x.name, day, tpl?.aliases)
         const lastTop = last ? topSet(last.sets) : null
         return (
           <div className="ex" key={i}>

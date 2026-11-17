@@ -66,6 +66,18 @@ export async function saveActivity(a: Activity): Promise<void> {
   await db.activities.put(a)
 }
 
+/** Mehrere Einheiten speichern; gleiche IDs werden ersetzt. Gibt die Zahl neuer Einträge zurück. */
+export async function saveActivities(list: Activity[]): Promise<{ added: number; updated: number }> {
+  const existing = new Set(await db.activities.where('id').anyOf(list.map((a) => a.id)).primaryKeys())
+  await db.activities.bulkPut(list)
+  const updated = list.filter((a) => existing.has(a.id)).length
+  return { added: list.length - updated, updated }
+}
+
+export async function countExisting(ids: string[]): Promise<number> {
+  return (await db.activities.where('id').anyOf(ids).primaryKeys()).length
+}
+
 export async function deleteActivity(id: string): Promise<void> {
   await db.activities.delete(id)
 }

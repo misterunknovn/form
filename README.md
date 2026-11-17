@@ -16,6 +16,15 @@ Lauf- und Krafttraining planen, erfassen und mit Claude auswerten. Form ist eine
 - **Plan**: Gesamtplan Laufen und Kraft, Phasen, Einheiten im Detail, Regeln, Ernährung, Austausch mit Claude, Sicherung.
 - **Erfassen** über das Plus: Lauf (manuell oder GPX/TCX-Datei), Rad, Krafteinheit mit Sätzen, Gewicht und RIR, Leistungstest.
 
+## Bisherige Daten importieren
+
+Plan → Einstellungen → **Daten importieren (CSV)**. Mehrere Dateien auf einmal sind möglich, das Format wird erkannt:
+
+- **Hevy** (Export „workout_data.csv“): jede Einheit mit Übungen, Sätzen, Gewicht und RPE (wird zu RIR = 10 − RPE). Aufwärmsätze zählen nicht. Die Muskelgruppe ergibt sich aus dem Übungsnamen, die Routine (Upper/Lower Body A/B) aus dem Titel.
+- **Lauftracker** (`date;type;setting;km;durSec;…`): Läufe mit Intervallen (Tempo@Puls), Schwellenblock, Laufband/draußen, Schmerz, RPE und Notizen; Tests werden zu Leistungstests mit VDOT.
+
+Vor dem Import zeigt Form Anzahl, Zeitraum und Warnungen (z. B. unplausible Dauer). Jede Einheit hat eine feste ID aus ihren Daten, ein erneuter Import aktualisiert also statt zu verdoppeln. Hevy-Namen sind in den Planübungen als `aliases` hinterlegt, damit „zuletzt X kg“ und das Vorausfüllen funktionieren.
+
 ## Mit Claude arbeiten
 
 1. Plan → **Daten kopieren**: Form erstellt eine Zusammenfassung der letzten 6 Wochen, des Plans und deiner Frage.

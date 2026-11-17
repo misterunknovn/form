@@ -5,13 +5,14 @@ export type Weekday = 'mo' | 'di' | 'mi' | 'do' | 'fr' | 'sa' | 'so'
 export const WEEKDAYS: Weekday[] = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so']
 
 export type RunType = 'easy' | 'intervall' | 'schwelle' | 'long' | 'test' | 'rennen'
-export type Muscle = 'ruecken' | 'seitl_schulter' | 'hintere_schulter' | 'bauch' | 'brust' | 'beine' | 'arme'
+export type Muscle = 'ruecken' | 'seitl_schulter' | 'hintere_schulter' | 'vordere_schulter' | 'bauch' | 'brust' | 'beine' | 'arme'
 
 export const MUSCLES: { id: Muscle; name: string }[] = [
   { id: 'beine', name: 'Beine' },
   { id: 'ruecken', name: 'Rücken' },
   { id: 'seitl_schulter', name: 'Seitliche Schulter' },
   { id: 'hintere_schulter', name: 'Hintere Schulter' },
+  { id: 'vordere_schulter', name: 'Vordere Schulter' },
   { id: 'bauch', name: 'Bauch' },
   { id: 'brust', name: 'Brust' },
   { id: 'arme', name: 'Arme' },
@@ -91,6 +92,7 @@ export interface ExerciseTemplate {
   rir: string
   optional?: boolean
   note?: string
+  aliases?: string[] // andere Namen derselben Übung, z. B. aus Hevy
 }
 
 export interface StrengthWorkout {
@@ -168,16 +170,30 @@ interface BaseActivity {
   planned?: string // Titel der zugeordneten geplanten Einheit
 }
 
+export interface IntervalRep {
+  kmh: number
+  hr?: number
+}
+
 export interface RunActivity extends BaseActivity {
   kind: 'run'
   runType: RunType
   title?: string // z. B. "4 × 4 Min"
-  distanceKm: number
-  durationSec: number
+  distanceKm: number // 0 = unbekannt
+  durationSec: number // 0 = unbekannt
   avgHr?: number
   effort?: number // 1–5
+  rpe?: number // 1–10
   shoeId?: string
-  source?: 'manuell' | 'gpx' | 'tcx'
+  source?: 'manuell' | 'gpx' | 'tcx' | 'csv'
+  setting?: 'draussen' | 'laufband'
+  strides?: boolean
+  last3Hr?: number // Ø Puls der letzten 3 km (Long Run)
+  maxHr?: number
+  main?: { minutes?: number; paceSec?: number; hr?: number } // Hauptteil, z. B. Schwellenblock
+  intervals?: IntervalRep[]
+  pain?: number // 0–10
+  painNote?: string
 }
 
 export interface BikeActivity extends BaseActivity {
@@ -192,6 +208,7 @@ export interface StrengthActivity extends BaseActivity {
   title: string
   durationMin: number
   exercises: ExerciseEntry[]
+  source?: 'hevy'
 }
 
 export interface TestActivity extends BaseActivity {
@@ -199,6 +216,8 @@ export interface TestActivity extends BaseActivity {
   distanceKm: number
   durationSec: number
   vdot: number
+  maxHr?: number
+  setting?: 'draussen' | 'laufband'
 }
 
 export type Activity = RunActivity | BikeActivity | StrengthActivity | TestActivity

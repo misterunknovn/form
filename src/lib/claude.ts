@@ -18,15 +18,26 @@ function describeActivity(a: Activity): string {
   const note = a.note ? ` – Notiz: ${a.note}` : ''
   switch (a.kind) {
     case 'run': {
-      const pace = a.distanceKm > 0 ? fmtPace(a.durationSec / a.distanceKm) : '–'
-      const hr = a.avgHr ? `, Ø ${a.avgHr} bpm` : ''
-      const eff = a.effort ? `, Anstrengung ${a.effort}/5` : ''
-      return `- ${d}: Lauf ${RUN_NAMES[a.runType]}${a.title ? ' ' + a.title : ''}, ${fmtKm(a.distanceKm)} km in ${fmtDuration(a.durationSec)} (${pace} /km${hr}${eff})${planned}${note}`
+      const parts: string[] = []
+      parts.push(a.distanceKm ? `${fmtKm(a.distanceKm)} km` : 'Distanz unbekannt')
+      if (a.durationSec) parts.push(`in ${fmtDuration(a.durationSec)}`)
+      if (a.distanceKm && a.durationSec) parts.push(`(${fmtPace(a.durationSec / a.distanceKm)} /km)`)
+      const extra: string[] = []
+      if (a.setting) extra.push(a.setting === 'laufband' ? 'Laufband' : 'draußen')
+      if (a.avgHr) extra.push(`Ø ${a.avgHr} bpm`)
+      if (a.last3Hr) extra.push(`letzte 3 km Ø ${a.last3Hr} bpm`)
+      if (a.main) extra.push(`Hauptteil ${a.main.minutes ?? '?'} Min${a.main.paceSec ? ` @ ${fmtPace(a.main.paceSec)} /km` : ''}${a.main.hr ? `, ${a.main.hr} bpm` : ''}`)
+      if (a.intervals?.length) extra.push(`Intervalle ${a.intervals.map((i) => `${i.kmh} km/h${i.hr ? `@${i.hr}` : ''}`).join(' | ')}`)
+      if (a.strides) extra.push('mit Steigerungen')
+      if (a.rpe) extra.push(`RPE ${a.rpe}`)
+      else if (a.effort) extra.push(`Anstrengung ${a.effort}/5`)
+      if (a.pain !== undefined) extra.push(`Schmerz ${a.pain}/10${a.painNote ? ` (${a.painNote})` : ''}`)
+      return `- ${d}: Lauf ${RUN_NAMES[a.runType]}${a.title ? ' ' + a.title : ''}, ${parts.join(' ')}${extra.length ? '; ' + extra.join(', ') : ''}${planned}${note}`
     }
     case 'bike':
       return `- ${d}: Rad ${Math.round(a.durationSec / 60)} Min${a.avgHr ? `, Ø ${a.avgHr} bpm` : ''}${note}`
     case 'test':
-      return `- ${d}: Leistungstest ${fmtKm(a.distanceKm)} km in ${fmtDuration(a.durationSec)} → VDOT ${a.vdot.toFixed(1)}${note}`
+      return `- ${d}: Leistungstest ${fmtKm(a.distanceKm)} km in ${fmtDuration(a.durationSec)}${a.setting === 'laufband' ? ' (Laufband)' : ''}${a.maxHr ? `, max. ${a.maxHr} bpm` : ''} → VDOT ${a.vdot.toFixed(1)}${note}`
     case 'strength': {
       const ex = a.exercises
         .map((e) => `${e.name}: ${e.sets.map((s) => `${s.reps}×${s.kg}kg${s.rir !== undefined ? ` RIR${s.rir}` : ''}`).join(', ')}`)

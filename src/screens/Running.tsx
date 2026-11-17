@@ -72,7 +72,7 @@ function Volume() {
           <div className="kpi">
             <div className="kpi-l">Distanz · diese Woche</div>
             <div className="kpi-v"><b>{fmtKm(cur.km)}</b><span>km</span></div>
-            {prev.km > 0 && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, font: '500 11px var(--font)', color: 'var(--muted)' }}>Vorwoche {fmtKm(prev.km)} km <WeekDelta cur={prev.km} prev={weeks[weeks.length - 3].km} /></div>}
+            {prev.km > 0 && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, font: '500 11px var(--font)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Vorwoche {fmtKm(prev.km)} km <WeekDelta cur={prev.km} prev={weeks[weeks.length - 3].km} /></div>}
           </div>
           <div className="kpi">
             <div className="kpi-l">Zeit · diese Woche</div>
@@ -132,7 +132,7 @@ function Progress({ v, tests, race, totalKm }: { v: ReturnType<typeof currentVdo
         </div>
         <div className="desc" style={{ fontSize: 13 }}>
           {gain !== null ? `Seit deinem ersten Test. ` : ''}
-          Deine Halbmarathon-Prognose ({fmtDuration(pred)}) liegt {fmtNum(Math.abs(margin))} s {margin <= 0 ? 'unter' : 'über'} dem Ziel des {race.name}s.
+          Deine Halbmarathon-Prognose ({fmtDuration(pred)}) liegt {Math.abs(margin) >= 60 ? `${fmtDuration(Math.abs(margin))} min` : `${Math.abs(margin)} s`} {margin <= 0 ? 'unter' : 'über'} dem Ziel des {race.name}s ({fmtDuration(race.goalSec)}).
         </div>
       </>
     )

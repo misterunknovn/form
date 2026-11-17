@@ -66,6 +66,11 @@ export function parseDecimal(input: string): number | null {
   return isFinite(n) ? n : null
 }
 
+/** km/h mit einer Nachkommastelle: "13,8 km/h" */
+export function fmtKmh(kmh: number): string {
+  return isFinite(kmh) && kmh > 0 ? `${fmtNum(Math.round(kmh * 10) / 10, 1)} km/h` : '–'
+}
+
 export function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }

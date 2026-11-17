@@ -138,9 +138,10 @@ export interface BestEffort {
   date: ISODate
 }
 
-/** Bestzeiten: Tests und Läufe, deren Distanz zur Standarddistanz passt (±3 %) */
+/** Bestzeiten: Tests und Rennen, deren Distanz zur Standarddistanz passt (±3 %) */
 export function bestEfforts(acts: Activity[]): (BestEffort | { km: number; name: string; sec: null })[] {
-  const runs = runLike(acts)
+  // nur Tests und Rennen: ein lockerer 10-km-Lauf ist keine Bestzeit
+  const runs = runLike(acts).filter((r) => r.runType === 'test' || r.runType === 'rennen')
   return STANDARD_DISTANCES.map((d) => {
     const cands = runs.filter((r) => Math.abs(r.km - d.km) / d.km <= 0.03 && r.sec > 0)
     if (!cands.length) return { km: d.km, name: d.name, sec: null }
@@ -182,12 +183,31 @@ function secToClock(sec: number): string {
   return h ? `${h}:${p(m)}:${p(r)}` : `${m}:${p(r)}`
 }
 
+/**
+ * Aussagekräftige Pace eines Laufs (s/km): bei Schwelle die Pace des Hauptteils,
+ * bei Intervallen das Ø-Tempo der Intervalle, sonst Gesamtdauer / Distanz.
+ */
+export function effectivePace(r: RunActivity): number | null {
+  if (r.runType === 'schwelle' && r.main?.paceSec) return r.main.paceSec
+  if (r.runType === 'intervall' && r.intervals?.length) return 3600 / (r.intervals.reduce((s, i) => s + i.kmh, 0) / r.intervals.length)
+  return r.distanceKm > 0 && r.durationSec > 0 ? r.durationSec / r.distanceKm : null
+}
+
+/** Puls passend zu effectivePace */
+export function effectiveHr(r: RunActivity): number | undefined {
+  if (r.runType === 'schwelle' && r.main?.hr) return r.main.hr
+  const hrs = r.intervals?.map((i) => i.hr).filter((x): x is number => !!x)
+  if (r.runType === 'intervall' && hrs?.length) return Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length)
+  return r.avgHr
+}
+
 /** Durchschnittspace (s/km) eines Lauftyps in einem Zeitraum */
 export function avgPace(acts: Activity[], types: RunType[], from: ISODate, to: ISODate): number | null {
-  const rs = inRange(acts.filter(isRun), from, to).filter((r) => types.includes(r.runType) && r.distanceKm > 0)
-  const km = rs.reduce((s, r) => s + r.distanceKm, 0)
-  const sec = rs.reduce((s, r) => s + r.durationSec, 0)
-  return km > 0 ? sec / km : null
+  const ps = inRange(acts.filter(isRun), from, to)
+    .filter((r) => types.includes(r.runType))
+    .map(effectivePace)
+    .filter((p): p is number => p !== null)
+  return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : null
 }
 
 /** Pace-Verlauf eines Lauftyps, ein Wert pro Woche (null = keine Einheit) */
@@ -220,12 +240,13 @@ export interface LastExercise {
   sets: { reps: number; kg: number; rir?: number }[]
 }
 
-/** Letzte Ausführung einer Übung vor einem Datum */
-export function lastExercise(acts: Activity[], name: string, before: ISODate): LastExercise | null {
+/** Letzte Ausführung einer Übung vor einem Datum (auch unter anderem Namen, z. B. aus Hevy) */
+export function lastExercise(acts: Activity[], name: string, before: ISODate, aliases: string[] = []): (LastExercise & { name: string }) | null {
+  const names = [name, ...aliases]
   const ss = byDateDesc(acts.filter(isStrength)).filter((a) => a.date < before)
   for (const a of ss) {
-    const e = a.exercises.find((x) => x.name === name)
-    if (e && e.sets.length) return { date: a.date, sets: e.sets }
+    const e = a.exercises.find((x) => names.includes(x.name))
+    if (e && e.sets.length) return { date: a.date, sets: e.sets, name: e.name }
   }
   return null
 }
@@ -240,16 +261,24 @@ export function e1rm(kg: number, reps: number): number {
   return reps <= 1 ? kg : kg * (1 + reps / 30)
 }
 
-/** Bestleistungen je Übung (schwerster Satz) */
-export function strengthPRs(acts: Activity[]) {
-  const best = new Map<string, { name: string; kg: number; reps: number; date: ISODate; score: number }>()
+/**
+ * Bestleistungen je Übung (Satz mit dem höchsten geschätzten 1RM).
+ * Mit `groups` werden Namen zusammengefasst (Planübung + Hevy-Namen) und in dieser Reihenfolge geliefert.
+ */
+export function strengthPRs(acts: Activity[], groups?: { name: string; aliases?: string[] }[]) {
+  const best = new Map<string, { name: string; via: string; kg: number; reps: number; date: ISODate; score: number }>()
+  const keyOf = (n: string) => (groups ? groups.find((g) => g.name === n || g.aliases?.includes(n))?.name : n)
   for (const a of acts.filter(isStrength))
-    for (const e of a.exercises)
+    for (const e of a.exercises) {
+      const key = keyOf(e.name)
+      if (!key) continue
       for (const s of e.sets) {
         if (s.kg <= 0) continue
         const score = e1rm(s.kg, s.reps)
-        const cur = best.get(e.name)
-        if (!cur || score > cur.score) best.set(e.name, { name: e.name, kg: s.kg, reps: s.reps, date: a.date, score })
+        const cur = best.get(key)
+        if (!cur || score > cur.score) best.set(key, { name: key, via: e.name, kg: s.kg, reps: s.reps, date: a.date, score })
       }
+    }
+  if (groups) return groups.map((g) => best.get(g.name)).filter((x): x is NonNullable<typeof x> => !!x)
   return [...best.values()].sort((a, b) => b.score - a.score)
 }

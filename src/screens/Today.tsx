@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useData } from '../data/store'
-import type { Activity, ISODate, Plan, PlannedSession, RunActivity, StrengthActivity } from '../data/types'
+import type { Activity, ISODate, Plan, PlannedSession, RunActivity, StrengthActivity, StrengthWorkout } from '../data/types'
 import { useNav } from '../App'
 import { Card, Delta, Dot, Empty, Header, Tiles, Toggle } from '../components/ui'
 import { IconToday } from '../components/icons'
@@ -8,9 +8,9 @@ import { BackupReminder } from './Settings'
 import {
   addDays, DAY_SHORT, fmtDayLong, fmtDayShort, fmtDotDate, fmtWeekRange, fromISO, mondayOf, weekdayIndex,
 } from '../lib/dates'
-import { fmtDuration, fmtKg, fmtKm, fmtPace } from '../lib/format'
+import { fmtDuration, fmtKg, fmtKm, fmtKmh, fmtPace } from '../lib/format'
 import { phaseFor, plannedSets, rulesFor, sessionsOn, weekFor, weekIndex, workoutById } from '../lib/plan'
-import { byDateDesc, countSets, isRun, isStrength, lastExercise, runLike, sessionLoad, topSet } from '../lib/stats'
+import { byDateDesc, countSets, effectiveHr, effectivePace, isRun, isStrength, lastExercise, runLike, sessionLoad, topSet } from '../lib/stats'
 
 export function Today() {
   const { plan, activities, today } = useData()
@@ -199,8 +199,8 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
       : doneRun
         ? [
             { v: fmtDuration(doneRun.durationSec), l: 'Dauer' },
-            { v: `${fmtKm(doneRun.distanceKm)} km`, l: 'Distanz' },
-            { v: fmtPace(doneRun.durationSec / doneRun.distanceKm), l: 'Pace /km' },
+            { v: doneRun.distanceKm ? `${fmtKm(doneRun.distanceKm)} km` : '–', l: 'Distanz' },
+            runPaceTile(doneRun),
           ]
         : [
             { v: s.durationMin ? `${s.durationMin} Min` : '–', l: 'Dauer' },
@@ -240,6 +240,13 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
   )
 }
 
+function runPaceTile(r: RunActivity): { v: string; l: string } {
+  const p = effectivePace(r)
+  if (r.runType === 'intervall' && r.intervals?.length && p) return { v: fmtKmh(3600 / p), l: 'Ø Intervall' }
+  if (r.runType === 'schwelle' && r.main?.paceSec) return { v: fmtPace(r.main.paceSec), l: 'Pace Schwelle' }
+  return { v: p ? fmtPace(p) : '–', l: 'Pace /km' }
+}
+
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 function strengthTiles(plan: Plan, s: PlannedSession, done?: StrengthActivity) {
@@ -261,11 +268,12 @@ function strengthTiles(plan: Plan, s: PlannedSession, done?: StrengthActivity) {
 
 function RunDetails({ plan, s, date, done, activities }: { plan: Plan; s: PlannedSession; date: ISODate; done?: RunActivity; activities: Activity[] }) {
   const prev = byDateDesc(activities.filter(isRun))
-    .filter((r) => r.runType === s.runType && r.date < date && r.distanceKm > 0)
+    .filter((r) => r.runType === s.runType && r.date < date && effectivePace(r) !== null)
     .slice(0, 3)
     .reverse()
-  const rows = [...prev, ...(done ? [done] : [])]
+  const rows = [...prev, ...(done && effectivePace(done) !== null ? [done] : [])]
   const lastPrev = prev[prev.length - 1]
+  const isInt = s.runType === 'intervall'
   return (
     <>
       {s.steps && (
@@ -290,27 +298,30 @@ function RunDetails({ plan, s, date, done, activities }: { plan: Plan; s: Planne
         <div className="hint" style={{ margin: '4px 0 0' }}>Noch keine früheren Einheiten dieses Typs. Nach dem ersten Eintrag siehst du hier den Vergleich.</div>
       ) : (
         <>
-          <div className="gt gt-h" style={{ gridTemplateColumns: '52px 1fr 40px 36px 52px' }}>
-            <span>DATUM</span><span>KM</span><span className="r">PACE</span><span className="r">PULS</span><span className="r">Δ</span>
+          <div className="gt gt-h" style={{ gridTemplateColumns: '46px 1fr 66px 32px 60px' }}>
+            <span>DATUM</span><span>{isInt ? 'INTERVALLE' : s.runType === 'schwelle' ? 'BLOCK' : 'KM'}</span><span className="r">{isInt ? 'TEMPO' : 'PACE'}</span><span className="r">PULS</span><span className="r">Δ {isInt ? 'PULS' : ''}</span>
           </div>
           {rows.map((r, i) => {
-            const pace = r.durationSec / r.distanceKm
+            const pace = effectivePace(r) ?? NaN
+            const hr = effectiveHr(r)
             const before = rows[i - 1]
-            const d = before ? Math.round(pace - before.durationSec / before.distanceKm) : null
+            // Intervalle: gleicher Puls bei gleichem Tempo zählt, sonst die Pace
+            const d = !before ? null : isInt ? (hr && effectiveHr(before) ? hr - effectiveHr(before)! : null) : Math.round(pace - (effectivePace(before) ?? NaN))
             const isDone = done && r.id === done.id
             return (
-              <div key={r.id} className="gt gt-r" style={{ gridTemplateColumns: '52px 1fr 40px 36px 52px', borderTop: i === 0 ? 'none' : undefined }}>
+              <div key={r.id} className="gt gt-r" style={{ gridTemplateColumns: '46px 1fr 66px 32px 60px', borderTop: i === 0 ? 'none' : undefined }}>
                 <span style={{ font: '500 12px var(--font)', color: isDone ? 'var(--run)' : 'var(--text-2)' }} className="num">{isDone ? 'Heute' : fmtDotDate(r.date)}</span>
-                <span style={{ font: '500 12px var(--font)', color: isDone ? 'var(--text)' : 'var(--soft)', whiteSpace: 'nowrap' }}>{r.title ?? `${fmtKm(r.distanceKm)} km`}</span>
-                <span className="r num" style={{ font: '600 13px var(--font)', color: isDone ? 'var(--text)' : 'var(--soft)' }}>{fmtPace(pace)}</span>
-                <span className="r num" style={{ font: '500 12px var(--font)', color: 'var(--text-2)' }}>{r.avgHr ?? '–'}</span>
+                <span style={{ font: '500 12px var(--font)', color: isDone ? 'var(--text)' : 'var(--soft)', whiteSpace: 'nowrap' }}>{isInt ? (r.intervals?.length ? `${r.intervals.length} Wdh.` : '–') : s.runType === 'schwelle' && r.main?.minutes ? `${r.main.minutes} Min` : r.distanceKm ? `${fmtKm(r.distanceKm)} km` : r.title ?? '–'}</span>
+                <span className="r num" style={{ font: '600 13px var(--font)', color: isDone ? 'var(--text)' : 'var(--soft)' }}>{isInt ? fmtKmh(3600 / pace) : fmtPace(pace)}</span>
+                <span className="r num" style={{ font: '500 12px var(--font)', color: 'var(--text-2)' }}>{hr ?? '–'}</span>
                 <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  {d === null ? <span style={{ font: '500 11px var(--font)', color: 'var(--faint)' }}>–</span> : d === 0 ? <Delta up={null}>±0 s</Delta> : <Delta up={d > 0} good={d < 0}>{Math.abs(d)} s</Delta>}
+                  {d === null || isNaN(d) ? <span style={{ font: '500 11px var(--font)', color: 'var(--faint)' }}>–</span> : d === 0 ? <Delta up={null}>±0</Delta> : <Delta up={d > 0} good={d < 0}>{Math.abs(d)} {isInt ? 'bpm' : 's'}</Delta>}
                 </span>
               </div>
             )
           })}
-          {done && lastPrev && (
+          {isInt && <div className="hint" style={{ margin: '6px 0 0' }}>Tempo und Puls der Intervalle (Ø). Weniger Puls bei gleichem Tempo heißt: fitter.</div>}
+          {done && lastPrev && effectivePace(done) !== null && (
             <div className="insight">{compareText(done, lastPrev)}</div>
           )}
         </>
@@ -326,14 +337,16 @@ function RunDetails({ plan, s, date, done, activities }: { plan: Plan; s: Planne
 }
 
 function compareText(done: RunActivity, prev: RunActivity): string {
-  const d = Math.round(done.durationSec / done.distanceKm - prev.durationSec / prev.distanceKm)
-  const km = done.distanceKm - prev.distanceKm
+  const d = Math.round((effectivePace(done) ?? 0) - (effectivePace(prev) ?? 0))
+  const km = done.distanceKm && prev.distanceKm ? done.distanceKm - prev.distanceKm : 0
   const parts: string[] = []
   if (Math.abs(km) >= 0.5) parts.push(`${fmtKm(Math.abs(km))} km ${km > 0 ? 'mehr' : 'weniger'}`)
   parts.push(d === 0 ? 'gleiche Pace' : `${Math.abs(d)} s/km ${d < 0 ? 'schneller' : 'langsamer'}`)
   let s = `${parts.join(' und ')} als am ${fmtDayShort(prev.date)}.`
-  if (done.avgHr && prev.avgHr) {
-    const h = done.avgHr - prev.avgHr
+  const h1 = effectiveHr(done)
+  const h0 = effectiveHr(prev)
+  if (h1 && h0) {
+    const h = h1 - h0
     s += h === 0 ? ' Puls gleich.' : ` Puls ${Math.abs(h)} bpm ${h < 0 ? 'niedriger' : 'höher'}.`
   }
   return s
@@ -350,30 +363,18 @@ function StrengthDetails({ plan, s, date, done, activities }: { plan: Plan; s: P
         <span>ÜBUNG</span><span className="r">{done ? 'HEUTE' : 'ZULETZT'}</span><span className="r">Δ</span>
       </div>
       <div className="rows">
-        {wo.exercises.map((e) => {
-          const last = lastExercise(activities, e.name, date)
-          const lastTop = last ? topSet(last.sets) : null
-          const todayEx = done?.exercises.find((x) => x.name === e.name)
-          const todayTop = todayEx ? topSet(todayEx.sets) : null
-          const n = plannedSets(e.sets, s)
-          const shown = done ? todayTop : lastTop
-          const d = todayTop && lastTop ? Math.round((todayTop.kg - lastTop.kg) * 10) / 10 : null
-          return (
-            <div key={e.name} style={{ display: 'grid', gridTemplateColumns: '1fr auto 64px', columnGap: 8, alignItems: 'center', padding: '9px 0', opacity: e.optional ? 0.6 : 1 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ font: '600 13px var(--font)' }}>{e.name}{e.optional ? ' (optional)' : ''}</div>
-                <div style={{ font: '400 11px var(--font)', color: 'var(--text-2)', marginTop: 2 }}>
-                  {n}{e.setsMax && !s.setsFactor && !s.setsOverride ? `–${e.setsMax}` : ''} × {e.reps} · RIR {e.rir}
-                  {done && lastTop ? <span style={{ color: 'var(--muted)' }}> · zuletzt {fmtKg(lastTop.kg)} kg</span> : null}
-                </div>
-              </div>
-              <span className="r num" style={{ font: '600 13px var(--font)', whiteSpace: 'nowrap' }}>{shown ? (shown.kg ? `${fmtKg(shown.kg)} kg` : `${shown.reps} Wdh.`) : '–'}</span>
-              <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                {d === null ? <span style={{ font: '500 11px var(--font)', color: 'var(--faint)' }}>–</span> : d === 0 ? <Delta up={null}>±0</Delta> : <Delta up={d > 0} tone="str" good={d > 0}>{d > 0 ? '+' : '−'}{fmtKg(Math.abs(d))} kg</Delta>}
-              </span>
+        {(done ? doneRows(plan, wo, done, date, activities) : planRows(wo, s, date, activities)).map((r) => (
+          <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto 64px', columnGap: 8, alignItems: 'center', padding: '9px 0', opacity: r.dim ? 0.5 : 1 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ font: '600 13px var(--font)' }}>{r.name}</div>
+              <div style={{ font: '400 11px var(--font)', color: 'var(--text-2)', marginTop: 2 }}>{r.sub}</div>
             </div>
-          )
-        })}
+            <span className="r num" style={{ font: '600 13px var(--font)', whiteSpace: 'nowrap' }}>{r.value}</span>
+            <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {r.delta === null ? <span style={{ font: '500 11px var(--font)', color: 'var(--faint)' }}>–</span> : r.delta === 0 ? <Delta up={null}>±0</Delta> : <Delta up={r.delta > 0} tone="str" good={r.delta > 0}>{r.delta > 0 ? '+' : '−'}{fmtKg(Math.abs(r.delta))} kg</Delta>}
+            </span>
+          </div>
+        ))}
       </div>
       {wo.note && <div className="hint" style={{ margin: '8px 0 0' }}>{wo.note}</div>}
       {done && prevSession && (
@@ -387,6 +388,61 @@ function StrengthDetails({ plan, s, date, done, activities }: { plan: Plan; s: P
       )}
     </>
   )
+}
+
+interface ExRow {
+  key: string
+  name: string
+  sub: string
+  value: string
+  delta: number | null
+  dim?: boolean
+}
+
+const setLabel = (t: { kg: number; reps: number } | null) => (t ? (t.kg ? `${fmtKg(t.kg)} kg` : `${t.reps} Wdh.`) : '–')
+
+/** Geplante Übungen mit dem letzten Gewicht (auch unter Hevy-Namen) */
+function planRows(wo: StrengthWorkout, s: PlannedSession, date: ISODate, acts: Activity[]): ExRow[] {
+  return wo.exercises.map((e) => {
+    const last = lastExercise(acts, e.name, date, e.aliases)
+    const n = plannedSets(e.sets, s)
+    return {
+      key: e.name,
+      name: `${e.name}${e.optional ? ' (optional)' : ''}`,
+      sub: `${n}${e.setsMax && !s.setsFactor && !s.setsOverride ? `–${e.setsMax}` : ''} × ${e.reps} · RIR ${e.rir}${last && last.name !== e.name ? ` · zuletzt als ${last.name}` : ''}`,
+      value: setLabel(last ? topSet(last.sets) : null),
+      delta: null,
+      dim: e.optional,
+    }
+  })
+}
+
+/** Tatsächlich gemachte Übungen gegen das letzte Mal, danach nicht gemachte Planübungen */
+function doneRows(plan: Plan, wo: StrengthWorkout, done: StrengthActivity, date: ISODate, acts: Activity[]): ExRow[] {
+  const all = plan.workouts.flatMap((w) => w.exercises)
+  const tplFor = (name: string) => all.find((t) => t.name === name || t.aliases?.includes(name))
+  const rows: ExRow[] = done.exercises.map((x) => {
+    const tpl = tplFor(x.name)
+    const others = tpl ? [tpl.name, ...(tpl.aliases ?? [])].filter((n) => n !== x.name) : []
+    // zuerst genau dieselbe Übung, nur ersatzweise eine Variante (z. B. Seil statt Stange)
+    const last = lastExercise(acts, x.name, date) ?? lastExercise(acts, x.name, date, others)
+    const top = topSet(x.sets)
+    const lastTop = last ? topSet(last.sets) : null
+    const reps = x.sets.map((z) => z.reps).join('/')
+    return {
+      key: x.name,
+      name: x.name,
+      sub: `${x.sets.length} × ${reps}${lastTop ? ` · zuletzt ${setLabel(lastTop)}` : ''}`,
+      value: setLabel(top),
+      delta: top && lastTop && top.kg && lastTop.kg ? Math.round((top.kg - lastTop.kg) * 10) / 10 : null,
+    }
+  })
+  const doneNames = new Set(done.exercises.map((x) => x.name))
+  for (const e of wo.exercises) {
+    if (e.optional || [e.name, ...(e.aliases ?? [])].some((n) => doneNames.has(n))) continue
+    rows.push({ key: `plan-${e.name}`, name: e.name, sub: 'Im Plan, nicht gemacht', value: '–', delta: null, dim: true })
+  }
+  return rows
 }
 
 function CompareTile({ label, v, prev, cur, unit, pct }: { label: string; v: string; prev: number; cur: number; unit: string; pct?: boolean }) {
@@ -415,8 +471,8 @@ function ExtraCard({ a }: { a: Activity }) {
     a.kind === 'run' || a.kind === 'test'
       ? [
           { v: fmtDuration(a.durationSec), l: 'Dauer' },
-          { v: `${fmtKm(a.distanceKm)} km`, l: 'Distanz' },
-          { v: fmtPace(a.durationSec / a.distanceKm), l: 'Pace /km' },
+          { v: a.distanceKm ? `${fmtKm(a.distanceKm)} km` : '–', l: 'Distanz' },
+          a.kind === 'run' ? runPaceTile(a) : { v: fmtPace(a.durationSec / a.distanceKm), l: 'Pace /km' },
         ]
       : a.kind === 'strength'
         ? [

@@ -281,12 +281,14 @@ function Muscles() {
 function DataTab() {
   const { plan, activities } = useData()
   const nav = useNav()
-  const prs = strengthPRs(activities).slice(0, 6)
+  const seen = new Set<string>()
+  const groups = plan.workouts.flatMap((w) => w.exercises).filter((e) => !seen.has(e.name) && !!seen.add(e.name))
+  const prs = strengthPRs(activities, groups).slice(0, 8)
   const name = (m: Muscle) => MUSCLES.find((x) => x.id === m)?.name ?? m
   return (
     <>
       <Card>
-        <CardHead title="Bestleistungen" aside="schwerster Satz" />
+        <CardHead title="Bestleistungen" aside="Übungen aus deinem Plan" />
         {prs.length === 0 ? (
           <Empty title="Noch keine Bestleistungen">Sie entstehen automatisch aus deinen Krafteinheiten.</Empty>
         ) : (
@@ -295,7 +297,7 @@ function DataTab() {
               <div key={p.name} className="row" style={{ padding: '12px 0' }}>
                 <div className="row-main">
                   <div className="row-t">{p.name}</div>
-                  <div className="row-s">{fmtDate(p.date)}</div>
+                  <div className="row-s">{fmtDate(p.date)}{p.via !== p.name ? ` · ${p.via}` : ''}</div>
                 </div>
                 <div>
                   <div className="row-v" style={{ fontSize: 22 }}>{fmtKg(p.kg)}<small>kg</small></div>
