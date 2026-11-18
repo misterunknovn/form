@@ -69,6 +69,21 @@ describe('Startplan aus dem PDF', () => {
   it('Wochenkilometer liegen nah am Plan', () => {
     for (const w of SEED_PLAN.weeks.slice(0, 7)) expect(Math.abs(weekRunKm(w) - w.targetKm)).toBeLessThanOrEqual(4)
   })
+  it('Kraftplan vom 18.11.: Sätze pro Muskelgruppe liegen im Zielbereich', () => {
+    const week = weekFor(SEED_PLAN, '2026-11-23')!
+    const sets: Record<string, number> = {}
+    for (const s of week.sessions.filter((x) => x.kind === 'strength'))
+      for (const e of SEED_PLAN.workouts.find((w) => w.id === s.workoutId)!.exercises.filter((e) => !e.optional))
+        sets[e.muscle] = (sets[e.muscle] ?? 0) + e.sets
+    for (const t of SEED_PLAN.muscleTargets) {
+      expect(sets[t.muscle], t.muscle).toBeGreaterThanOrEqual(t.min)
+      expect(sets[t.muscle], t.muscle).toBeLessThanOrEqual(t.max)
+    }
+    expect(sets.bauch).toBe(13)
+    const okB = SEED_PLAN.workouts.find((w) => w.id === 'ok-b')!
+    expect(okB.exercises.map((e) => e.name)).not.toContain('Hanging Leg Raise')
+    expect(SEED_PLAN.workouts.find((w) => w.id === 'uk-a')!.exercises[0].name).toBe('Beinbeuger')
+  })
   it('zeigt passende Regeln', () => {
     const mon = rulesFor(SEED_PLAN, '2026-11-30').map((r) => r.id)
     expect(mon).toContain('nach-long-run')

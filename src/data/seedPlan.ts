@@ -197,34 +197,35 @@ function fixRecovery(weeks: PlanWeek[]): PlanWeek[] {
   )
 }
 
+// Krafttraining: „Split und Übungen“, Stand 18.11.2026.
+// Umbenannte Übungen behalten ihren alten Namen als Alias, damit der Verlauf erhalten bleibt.
 const WORKOUTS: StrengthWorkout[] = [
   {
     id: 'ok-a',
     name: 'Oberkörper A',
-    day: 'Montag, nach dem Lauf',
+    day: 'Montag, schwer, nach dem Lauf',
     exercises: [
       { name: 'Latzug', muscle: 'ruecken', sets: 3, reps: '6–10', rir: '1–2', aliases: ['Latzug (MAG)', 'Latzug (Kabel)', 'Latzug (Kabelzug)'] },
-      { name: 'Brustgestütztes Rudern', muscle: 'ruecken', sets: 3, reps: '8–12', rir: '1–2' },
       { name: 'Seitheben am Kabel', muscle: 'seitl_schulter', sets: 4, reps: '10–15', rir: '0–1', aliases: ['Einarmiges Seitheben (Kabelzug)', 'Single Arm Lateral Raise (Cable)'] },
-      { name: 'Reverse Fly', muscle: 'hintere_schulter', sets: 3, reps: '12–15', rir: '0–1', aliases: ['Reverse Fliegende (Kabel)', 'Reverse Fliegende (Maschine)'] },
-      { name: 'Schrägbankdrücken (KH)', muscle: 'brust', sets: 2, reps: '6–10', rir: '2' },
       { name: 'Kabel-Crunch', muscle: 'bauch', sets: 3, reps: '10–15', rir: '0–1', aliases: ['Crunch am Kabelzug', 'Rumpfbeugen mit dem Kabel'] },
+      { name: 'Reverse Fly', muscle: 'hintere_schulter', sets: 3, reps: '12–15', rir: '0–1', aliases: ['Reverse Fliegende (Kabel)', 'Reverse Fliegende (Maschine)'] },
+      { name: 'Brustgestütztes Rudern', muscle: 'ruecken', sets: 3, reps: '8–12', rir: '1–2' },
+      { name: 'Schrägbankdrücken (KH)', muscle: 'brust', sets: 2, reps: '6–10', rir: '2' },
     ],
   },
   {
     id: 'ok-b',
     name: 'Oberkörper B',
     day: 'Donnerstag',
-    note: 'Die Einheit soll ca. 90 Minuten nicht überschreiten.',
     exercises: [
-      { name: 'Hanging Leg Raise', muscle: 'bauch', sets: 4, reps: '8–12', rir: '1', note: 'zuerst', aliases: ['Beinheben hängend'] },
-      { name: 'Klimmzüge', muscle: 'ruecken', sets: 3, reps: '5–8', rir: '1–2', note: 'gewichtet oder assistiert', aliases: ['Klimmzug (Gewichtet)', 'Klimmzug'] },
-      { name: 'Einarmiges Rudern', muscle: 'ruecken', sets: 3, reps: '8–12', rir: '1–2', aliases: ['Einarmiges Rudern am Kabel', 'Kurzhantelrudern'] },
-      { name: 'Straight-Arm-Pulldown', muscle: 'ruecken', sets: 2, reps: '12–15', rir: '0–1', aliases: ['Pulldown mit gestreckten Armen (Kabelzug)', 'Gerader Lat-Pulldown (Kabel)', 'Gerader Lat-Pulldown am Seil'] },
+      { name: 'Klimmzüge', muscle: 'ruecken', sets: 3, reps: '5–8', rir: '1–2', note: 'gewichtet', aliases: ['Klimmzug (Gewichtet)', 'Klimmzug'] },
       { name: 'Seitheben (KH)', muscle: 'seitl_schulter', sets: 4, reps: '12–20', rir: '0–1', aliases: ['Seitheben (Kurzhantel)', 'Seitheben im sitzen (Kurzhantel)', 'Seitheben sitzend (Kurzhantel)'] },
       { name: 'Seitheben (Maschine)', muscle: 'seitl_schulter', sets: 2, reps: '12–15', rir: '0–1' },
-      { name: 'Reverse Fly oder Face Pull', muscle: 'hintere_schulter', sets: 3, reps: '12–15', rir: '0–1', aliases: ['Face Pull', 'Reverse Fliegende (Kabel)', 'Reverse Fliegende (Maschine)'] },
-      { name: 'Kabel-Fly oder Brustmaschine', muscle: 'brust', sets: 2, reps: '10–15', rir: '1–2', aliases: ['Fliegende (Maschine)', 'Fliegende (Kabel)', 'Seated Chest Flys (Cable)'] },
+      { name: 'Kabel-Crunch', muscle: 'bauch', sets: 3, reps: '10–15', rir: '1', aliases: ['Crunch am Kabelzug', 'Rumpfbeugen mit dem Kabel'] },
+      { name: 'Einarmiges Rudern', muscle: 'ruecken', sets: 3, reps: '8–12', rir: '1–2', aliases: ['Einarmiges Rudern am Kabel', 'Kurzhantelrudern'] },
+      { name: 'Straight-Arm-Pulldown', muscle: 'ruecken', sets: 2, reps: '12–15', rir: '0–1', aliases: ['Pulldown mit gestreckten Armen (Kabelzug)', 'Gerader Lat-Pulldown (Kabel)', 'Gerader Lat-Pulldown am Seil'] },
+      { name: 'Reverse Fly / Face Pull', muscle: 'hintere_schulter', sets: 3, reps: '12–15', rir: '0–1', aliases: ['Reverse Fly oder Face Pull', 'Face Pull', 'Reverse Fliegende (Kabel)', 'Reverse Fliegende (Maschine)'] },
+      { name: 'Kabel-Fly / Brustmaschine', muscle: 'brust', sets: 2, reps: '10–15', rir: '1–2', aliases: ['Kabel-Fly oder Brustmaschine', 'Fliegende (Maschine)', 'Fliegende (Kabel)', 'Seated Chest Flys (Cable)'] },
     ],
   },
   {
@@ -232,19 +233,19 @@ const WORKOUTS: StrengthWorkout[] = [
     name: 'Unterkörper A',
     day: 'Mittwoch, schwer',
     exercises: [
-      { name: 'Beinpresse oder Kniebeuge', muscle: 'beine', sets: 3, reps: '4–6', rir: '2–3', aliases: ['Beinpresse sitzend', 'Beinpresse (Maschine)', 'Beinpresse'] },
-      { name: 'Rumänisches Kreuzheben', muscle: 'beine', sets: 3, reps: '5–8', rir: '2–3', note: 'beidbeinig', aliases: ['Rumänisches Kreuzheben (Langhantel)', 'Rumänisches Kreuzheben (Kurzhantel)'] },
-      { name: 'Wadenheben stehend', muscle: 'beine', sets: 3, reps: '6–10', rir: '1–2', note: 'schwer' },
       { name: 'Beinbeuger', muscle: 'beine', sets: 2, reps: '8–12', rir: '1–2', aliases: ['Liegendes Beinbeugen (Maschine)', 'Beinbeugen sitzend', 'Beinbeugen sitzend (Maschine)'] },
-      { name: 'Kabel-Crunch', muscle: 'bauch', sets: 3, reps: '10–15', rir: '1', aliases: ['Crunch am Kabelzug', 'Rumpfbeugen mit dem Kabel'] },
-      { name: 'Curls', muscle: 'arme', sets: 2, reps: '10–12', rir: '1–2', note: 'am Ende', aliases: ['Bizepscurl (Kurzhantel)', 'Hammer Curl (Kurzhantel)'] },
-      { name: 'Trizeps-Pushdown', muscle: 'arme', sets: 2, reps: '10–12', rir: '1–2', note: 'am Ende', aliases: ['Trizeps-Pushdown (Kabelzug)', 'Trizeps-Pushdown mit Seil (Kabelzug)'] },
+      { name: 'Beinpresse', muscle: 'beine', sets: 3, reps: '4–6', rir: '2–3', aliases: ['Beinpresse oder Kniebeuge', 'Beinpresse sitzend', 'Beinpresse (Maschine)'] },
+      { name: 'Wadenheben stehend', muscle: 'beine', sets: 3, reps: '6–10', rir: '1–2', note: 'schwer' },
+      { name: 'Rumänisches Kreuzheben', muscle: 'beine', sets: 3, reps: '5–8', rir: '2–3', aliases: ['Rumänisches Kreuzheben (Langhantel)', 'Rumänisches Kreuzheben (Kurzhantel)'] },
+      { name: 'Liegendes Beinheben', muscle: 'bauch', sets: 4, reps: '8–12', rir: '1' },
+      { name: 'Curls', muscle: 'arme', sets: 2, reps: '10–12', rir: '1–2', aliases: ['Bizepscurl (Kurzhantel)', 'Hammer Curl (Kurzhantel)'] },
+      { name: 'Trizeps-Pushdown', muscle: 'arme', sets: 2, reps: '10–12', rir: '1–2', aliases: ['Trizeps-Pushdown (Kabelzug)', 'Trizeps-Pushdown mit Seil (Kabelzug)'] },
     ],
   },
   {
     id: 'uk-b',
     name: 'Unterkörper B',
-    day: 'Freitagabend, Kraft und Belastbarkeit',
+    day: 'Freitag, Kraft und Belastbarkeit',
     note: 'Bulgarian Split Squat mit 2 Sätzen starten, nach zwei beschwerdefreien Wochen auf 3. Bei zu viel Muskelkater: hohes Step-up.',
     exercises: [
       { name: 'Bulgarian Split Squat', muscle: 'beine', sets: 2, setsMax: 3, reps: '4–6 pro Bein', rir: '3', note: 'oder hohes Step-up', aliases: ['Bulgarian Split Squat (Kurzhantel)', 'Bulgarischer Squat'] },
@@ -252,7 +253,7 @@ const WORKOUTS: StrengthWorkout[] = [
       { name: 'Wadenheben einbeinig', muscle: 'beine', sets: 2, reps: '6–8', rir: '2', note: 'stehend, schwer', aliases: ['Einbeiniges Wadenheben stehend (Kurzhantel)'] },
       { name: 'Hüftabduktion am Kabel', muscle: 'beine', sets: 2, reps: '12–15', rir: '2' },
       { name: 'Pallof Press', muscle: 'bauch', sets: 3, reps: '10 pro Seite', rir: '–', aliases: ['Pallof Press (Kabelzug)'] },
-      { name: 'Wadenheben sitzend', muscle: 'beine', sets: 2, reps: '8–12', rir: '1–2', optional: true, note: '3 s hoch, 2 s halten, 3 s runter' },
+      { name: 'Wadenheben sitzend', muscle: 'beine', sets: 2, reps: '8–12', rir: '1–2', optional: true, note: 'langsam: 3 s hoch, 2 s halten, 3 s runter' },
       { name: 'Nordic Curls', muscle: 'beine', sets: 2, reps: '5–6', rir: '–', optional: true, aliases: ['Nordic Hamstrings Curls'] },
     ],
   },
@@ -262,8 +263,8 @@ export const SEED_PLAN: Plan = {
   format: 'form-plan',
   version: 1,
   name: 'Halbmarathon 2027',
-  updated: '2026-11-17',
-  source: 'Trainingsplan Halbmarathon 2027 (Claude), Stand 17.11.2026',
+  updated: '2026-11-18',
+  source: 'Trainingsplan Halbmarathon 2027 (Stand 17.11.2026), Krafttraining Split und Übungen (Stand 18.11.2026)',
   races: [
     { id: 'b', name: 'B-Rennen', priority: 'B', date: '2027-03-14', distanceKm: 21.0975, goal: '1:46:30', goalSec: 6390, note: 'Pace ca. 5:03/km. Kontrolliert laufen, nicht am Limit.' },
     { id: 'a', name: 'A-Rennen', priority: 'A', date: '2027-04-25', distanceKm: 21.0975, goal: 'unter 1:45:00', goalSec: 6300, note: 'Pace ca. 4:59/km. Das Zielrennen.' },
