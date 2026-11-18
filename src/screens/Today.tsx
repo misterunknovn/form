@@ -58,7 +58,7 @@ export function Today() {
           for (const k of doneKinds) if (!kinds.includes(k as 'run' | 'strength')) kinds.push(k as 'run' | 'strength')
           return (
             <button key={d} onClick={() => setSel(d)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }} aria-label={fmtDayLong(d)}>
-              <span style={{ width: 30, height: 30, borderRadius: 15, display: 'grid', placeItems: 'center', background: isSel ? 'var(--text)' : 'transparent', color: isSel ? 'var(--bg)' : isToday ? '#fff' : 'var(--muted)', fontWeight: isSel || isToday ? 600 : 500 }}>{label}</span>
+              <span style={{ width: 30, height: 30, borderRadius: 15, display: 'grid', placeItems: 'center', background: isSel ? 'var(--text)' : 'transparent', boxShadow: isToday && !isSel ? 'inset 0 0 0 1.5px var(--run)' : 'none', color: isSel ? 'var(--bg)' : isToday ? 'var(--run)' : 'var(--muted)', fontWeight: isSel || isToday ? 600 : 500 }}>{label}</span>
               <div style={{ display: 'flex', gap: 3 }}>
                 {kinds.length === 0 && <i className="dot" style={{ background: 'var(--dot-off)' }} />}
                 {kinds.map((k) => (
@@ -97,7 +97,7 @@ export function Today() {
       )}
 
       {sessions.map((s, i) => (
-        <SessionCard key={i} plan={plan} date={sel} session={s} done={matched[i]} activities={activities} />
+        <SessionCard key={`${sel}-${i}`} plan={plan} date={sel} session={s} done={matched[i]} activities={activities} />
       ))}
       {extra.map((a) => (
         <ExtraCard key={a.id} a={a} />
@@ -358,21 +358,15 @@ function StrengthDetails({ plan, s, date, done, activities }: { plan: Plan; s: P
   const prevSession = byDateDesc(activities.filter(isStrength)).find((a) => a.date < date && a.workoutId === s.workoutId)
   return (
     <>
-      <div className="section-label">Übungen · {done ? 'heute vs. letztes Mal' : 'Plan und letztes Mal'}</div>
-      <div className="gt gt-h" style={{ gridTemplateColumns: '1fr auto 64px' }}>
-        <span>ÜBUNG</span><span className="r">{done ? 'HEUTE' : 'ZULETZT'}</span><span className="r">Δ</span>
-      </div>
+      <div className="section-label">Übungen</div>
       <div className="rows">
-        {(done ? doneRows(plan, wo, done, date, activities) : planRows(wo, s, date, activities)).map((r) => (
-          <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto 64px', columnGap: 8, alignItems: 'center', padding: '9px 0', opacity: r.dim ? 0.5 : 1 }}>
+        {(done ? doneRows(wo, done) : planRows(wo, s, date, activities)).map((r) => (
+          <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: 8, alignItems: 'center', padding: '9px 0', opacity: r.dim ? 0.5 : 1 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ font: '600 13px var(--font)' }}>{r.name}</div>
               <div style={{ font: '400 11px var(--font)', color: 'var(--text-2)', marginTop: 2 }}>{r.sub}</div>
             </div>
             <span className="r num" style={{ font: '600 13px var(--font)', whiteSpace: 'nowrap' }}>{r.value}</span>
-            <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              {r.delta === null ? <span style={{ font: '500 11px var(--font)', color: 'var(--faint)' }}>–</span> : r.delta === 0 ? <Delta up={null}>±0</Delta> : <Delta up={r.delta > 0} tone="str" good={r.delta > 0}>{r.delta > 0 ? '+' : '−'}{fmtKg(Math.abs(r.delta))} kg</Delta>}
-            </span>
           </div>
         ))}
       </div>
@@ -395,7 +389,6 @@ interface ExRow {
   name: string
   sub: string
   value: string
-  delta: number | null
   dim?: boolean
 }
 
@@ -409,38 +402,25 @@ function planRows(wo: StrengthWorkout, s: PlannedSession, date: ISODate, acts: A
     return {
       key: e.name,
       name: `${e.name}${e.optional ? ' (optional)' : ''}`,
-      sub: `${n}${e.setsMax && !s.setsFactor && !s.setsOverride ? `–${e.setsMax}` : ''} × ${e.reps} · RIR ${e.rir}${last && last.name !== e.name ? ` · zuletzt als ${last.name}` : ''}`,
+      sub: `${n}${e.setsMax && !s.setsFactor && !s.setsOverride ? `–${e.setsMax}` : ''} × ${e.reps} · RIR ${e.rir}`,
       value: setLabel(last ? topSet(last.sets) : null),
-      delta: null,
       dim: e.optional,
     }
   })
 }
 
-/** Tatsächlich gemachte Übungen gegen das letzte Mal, danach nicht gemachte Planübungen */
-function doneRows(plan: Plan, wo: StrengthWorkout, done: StrengthActivity, date: ISODate, acts: Activity[]): ExRow[] {
-  const all = plan.workouts.flatMap((w) => w.exercises)
-  const tplFor = (name: string) => all.find((t) => t.name === name || t.aliases?.includes(name))
-  const rows: ExRow[] = done.exercises.map((x) => {
-    const tpl = tplFor(x.name)
-    const others = tpl ? [tpl.name, ...(tpl.aliases ?? [])].filter((n) => n !== x.name) : []
-    // zuerst genau dieselbe Übung, nur ersatzweise eine Variante (z. B. Seil statt Stange)
-    const last = lastExercise(acts, x.name, date) ?? lastExercise(acts, x.name, date, others)
-    const top = topSet(x.sets)
-    const lastTop = last ? topSet(last.sets) : null
-    const reps = x.sets.map((z) => z.reps).join('/')
-    return {
-      key: x.name,
-      name: x.name,
-      sub: `${x.sets.length} × ${reps}${lastTop ? ` · zuletzt ${setLabel(lastTop)}` : ''}`,
-      value: setLabel(top),
-      delta: top && lastTop && top.kg && lastTop.kg ? Math.round((top.kg - lastTop.kg) * 10) / 10 : null,
-    }
-  })
+/** Tatsächlich gemachte Übungen, danach nicht gemachte Planübungen */
+function doneRows(wo: StrengthWorkout, done: StrengthActivity): ExRow[] {
+  const rows: ExRow[] = done.exercises.map((x) => ({
+    key: x.name,
+    name: x.name,
+    sub: `${x.sets.length} × ${x.sets.map((z) => z.reps).join('/')}`,
+    value: setLabel(topSet(x.sets)),
+  }))
   const doneNames = new Set(done.exercises.map((x) => x.name))
   for (const e of wo.exercises) {
     if (e.optional || [e.name, ...(e.aliases ?? [])].some((n) => doneNames.has(n))) continue
-    rows.push({ key: `plan-${e.name}`, name: e.name, sub: 'Im Plan, nicht gemacht', value: '–', delta: null, dim: true })
+    rows.push({ key: `plan-${e.name}`, name: e.name, sub: 'Im Plan, nicht gemacht', value: '–', dim: true })
   }
   return rows
 }
