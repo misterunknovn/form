@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useData } from '../data/store'
 import type { Activity, ISODate, Plan, PlannedSession, RunActivity, StrengthActivity, StrengthWorkout } from '../data/types'
 import { useNav } from '../App'
-import { Card, Delta, Empty, Header, Tiles, Toggle } from '../components/ui'
+import { Card, Delta, Empty, Header, Tiles } from '../components/ui'
 import { IconToday } from '../components/icons'
 import {
   addDays, DAY_SHORT, fmtDayLong, fmtDayShort, fmtDotDate, fmtWeekRange, fromISO, mondayOf, weekdayIndex,
@@ -201,17 +201,17 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
       </div>
       <div className="big-title">{s.title}</div>
       {sessionInfo(s) && <div className="desc">{sessionInfo(s)}</div>}
-      <Tiles items={tiles} />
+      <Tiles items={tiles} compact />
 
-      {(s.steps?.length || isStr || s.kind === 'run') && (
-        <Toggle open={open} onToggle={() => setOpen(!open)} label={['Details anzeigen', 'Details ausblenden']} />
-      )}
+      <ActionRow
+        open={(s.steps?.length || isStr || s.kind === 'run') ? open : undefined}
+        onToggle={() => setOpen(!open)}
+        action={done ? 'Bearbeiten' : s.runType === 'test' ? 'Test eintragen' : 'Eintragen'}
+        primary={!done}
+        onAction={log}
+      />
       {open && s.kind === 'run' && <RunDetails plan={plan} s={s} date={date} done={doneRun} activities={activities} />}
       {open && isStr && <StrengthDetails plan={plan} s={s} date={date} done={done as StrengthActivity | undefined} activities={activities} />}
-
-      <button className={done ? 'btn-secondary' : isStr ? 'btn-secondary' : 'btn-secondary'} style={{ marginTop: 12 }} onClick={log}>
-        {done ? 'Eintrag bearbeiten' : s.runType === 'test' ? 'Testergebnis eintragen' : 'Als erledigt eintragen'}
-      </button>
       {week?.estimated && s.kind !== 'strength' && (
         <div className="hint" style={{ margin: '8px 0 0' }}>Aus den Phasen abgeleitet. Claude verfeinert diese Woche, wenn es so weit ist.</div>
       )}
@@ -235,6 +235,25 @@ function sessionInfo(s: PlannedSession): string {
   if (s.kind === 'strength') return ''
   const time = s.time && !s.description?.toLowerCase().includes(s.time) ? ` ${cap(s.time)}.` : ''
   return `${s.description ?? ''}${time}`
+}
+
+/** Eine Zeile: links „Details“ auf- und zuklappen, rechts Eintragen bzw. Bearbeiten */
+function ActionRow({ open, onToggle, action, primary, onAction }: { open?: boolean; onToggle: () => void; action: string; primary: boolean; onAction: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)' }}>
+      {open !== undefined ? (
+        <button onClick={onToggle} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, font: '600 13px var(--font)', textAlign: 'left' }}>
+          <span className={`toggle-ico ${open ? 'open' : ''}`}>▼</span>
+          {open ? 'Details ausblenden' : 'Details'}
+        </button>
+      ) : (
+        <span style={{ flex: 1 }} />
+      )}
+      <button onClick={onAction} style={{ height: 34, padding: '0 16px', borderRadius: 10, font: '600 13px var(--font)', background: primary ? 'var(--text)' : 'var(--tile)', color: primary ? 'var(--bg)' : 'var(--text)', border: primary ? 'none' : '1px solid var(--line-2)' }}>
+        {action}
+      </button>
+    </div>
+  )
 }
 
 function runPaceTile(r: RunActivity): { v: string; l: string } {
@@ -468,10 +487,8 @@ function ExtraCard({ a }: { a: Activity }) {
         <span className="card-aside">Ungeplant</span>
       </div>
       <div className="big-title">{title}</div>
-      <Tiles items={tiles} />
-      <button className="btn-secondary" style={{ marginTop: 12 }} onClick={() => nav.open(a.kind === 'strength' ? { kind: 'strength', edit: a } : a.kind === 'test' ? { kind: 'test', edit: a } : { kind: 'run', edit: a })}>
-        Eintrag bearbeiten
-      </button>
+      <Tiles items={tiles} compact />
+      <ActionRow onToggle={() => {}} action="Bearbeiten" primary={false} onAction={() => nav.open(a.kind === 'strength' ? { kind: 'strength', edit: a } : a.kind === 'test' ? { kind: 'test', edit: a } : { kind: 'run', edit: a })} />
     </Card>
   )
 }

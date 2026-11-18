@@ -79,9 +79,9 @@ export function Delta({ up, children, tone = 'run', good = true }: { up: boolean
   )
 }
 
-export function Tiles({ items, large }: { items: { v: ReactNode; l: string }[]; large?: boolean }) {
+export function Tiles({ items, large, compact }: { items: { v: ReactNode; l: string }[]; large?: boolean; compact?: boolean }) {
   return (
-    <div className={`tiles ${large ? 'lg' : ''}`}>
+    <div className={`tiles ${large ? 'lg' : ''} ${compact ? 'compact' : ''}`}>
       {items.map((t, i) => (
         <div className="tile" key={i}>
           <div className="tile-v">{t.v}</div>

@@ -108,6 +108,10 @@ input, textarea, select { font: inherit; color: inherit; }
 .tile-v { font: 700 15px/1 var(--font); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tile-l { font: 500 10px var(--font); color: var(--text-2); margin-top: 6px; white-space: nowrap; }
 .tiles.lg .tile { padding: 14px 6px 12px; border-radius: 12px; }
+.tiles.compact { margin-top: 10px; }
+.tiles.compact .tile { padding: 6px 6px 7px; }
+.tiles.compact .tile-v { font-size: 14px; }
+.tiles.compact .tile-l { margin-top: 4px; }
 .tiles.lg .tile-v { font-size: 22px; }
 .tiles.lg .tile-l { font-size: 11px; margin-top: 8px; }
 
