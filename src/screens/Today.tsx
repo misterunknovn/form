@@ -107,9 +107,11 @@ export function Today() {
         </Card>
       )}
 
-      {sessions.map((s, i) => (
-        <SessionCard key={`${sel}-${i}`} plan={plan} date={sel} session={s} done={matched[i]} activities={activities} />
-      ))}
+      {sessions.length >= 2 ? (
+        <DayGrid key={sel} plan={plan} date={sel} sessions={sessions} matched={matched} activities={activities} />
+      ) : (
+        sessions.map((s, i) => <SessionCard key={`${sel}-${i}`} plan={plan} date={sel} session={s} done={matched[i]} activities={activities} />)
+      )}
       {extra.map((a) => (
         <ExtraCard key={a.id} a={a} />
       ))}
@@ -159,9 +161,9 @@ function hrLabel(plan: Plan, s: PlannedSession): { v: string; l: string } {
   return { v: `${plan.hr.easy[0]}–${plan.hr.easy[1]}`, l: 'HF Easy' }
 }
 
-function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan; date: ISODate; session: PlannedSession; done?: Activity; activities: Activity[] }) {
+function SessionCard({ plan, date, session: s, done, activities, initialOpen = false }: { plan: Plan; date: ISODate; session: PlannedSession; done?: Activity; activities: Activity[]; initialOpen?: boolean }) {
   const nav = useNav()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   const week = weekFor(plan, date)
   const phase = phaseFor(s.kind === 'strength' ? plan.strengthPhases : plan.phases, date)
   const wi = weekIndex(plan, date) + 1
@@ -169,15 +171,7 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
   const badge = isStr ? 'Kraft' : s.kind === 'bike' ? 'Rad' : 'Laufen'
   const doneRun = done && done.kind === 'run' ? done : undefined
 
-  const log = () => {
-    if (done) {
-      nav.open(done.kind === 'strength' ? { kind: 'strength', edit: done } : done.kind === 'test' ? { kind: 'test', edit: done } : { kind: 'run', edit: done })
-      return
-    }
-    if (isStr) nav.open({ kind: 'strength', date, planned: s })
-    else if (s.runType === 'test') nav.open({ kind: 'test' })
-    else nav.open({ kind: 'run', date, planned: s })
-  }
+  const log = () => openLog(nav, date, s, done)
 
   const tiles = isStr
     ? strengthTiles(plan, s, done as StrengthActivity | undefined)
@@ -208,11 +202,7 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
         </span>
       </div>
       <div className="big-title">{s.title}</div>
-      <div className="desc">
-        {s.description ?? (isStr ? workoutById(plan, s.workoutId)?.day : '')}
-        {s.time && !s.description?.includes(s.time) ? ` ${cap(s.time)}.` : ''}
-        {s.note ? ` ${s.note}` : ''}
-      </div>
+      <div className="desc">{sessionInfo(plan, s)}</div>
       <Tiles items={tiles} />
 
       {(s.steps?.length || isStr || s.kind === 'run') && (
@@ -229,6 +219,94 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
       )}
     </Card>
   )
+}
+
+/** Formular zum Eintragen bzw. Bearbeiten einer geplanten Einheit öffnen */
+function openLog(nav: ReturnType<typeof useNav>, date: ISODate, s: PlannedSession, done?: Activity) {
+  if (done) {
+    nav.open(done.kind === 'strength' ? { kind: 'strength', edit: done } : done.kind === 'test' ? { kind: 'test', edit: done } : { kind: 'run', edit: done })
+    return
+  }
+  if (s.kind === 'strength') nav.open({ kind: 'strength', date, planned: s })
+  else if (s.runType === 'test') nav.open({ kind: 'test' })
+  else nav.open({ kind: 'run', date, planned: s })
+}
+
+/** Kurzinfo unter dem Titel: bei Kraft nur die Art der Einheit, bei Läufen die Beschreibung */
+function sessionInfo(plan: Plan, s: PlannedSession): string {
+  if (s.kind === 'strength') return workoutById(plan, s.workoutId)?.focus ?? ''
+  const time = s.time && !s.description?.toLowerCase().includes(s.time) ? ` ${cap(s.time)}.` : ''
+  return `${s.description ?? ''}${time}`
+}
+
+/** Kurze Zeile für die kompakte Kachel */
+function shortInfo(plan: Plan, s: PlannedSession): string {
+  if (s.kind === 'strength') return workoutById(plan, s.workoutId)?.focus ?? ''
+  if (s.kind === 'bike') return '30–45 Min locker'
+  const key = s.steps?.find((x) => x.key)
+  if (key) return key.detail ? `${key.name} · ${key.detail.split(' · ').pop()}` : key.name
+  if (s.runType === 'easy' || s.runType === 'long') return `Locker · HF ${plan.hr.easy[0]}–${plan.hr.easy[1]}`
+  return s.description ?? ''
+}
+
+/** Zwei oder mehr Einheiten an einem Tag: nebeneinander auf einen Blick, Details darunter */
+function DayGrid({ plan, date, sessions, matched, activities }: { plan: Plan; date: ISODate; sessions: PlannedSession[]; matched: (Activity | undefined)[]; activities: Activity[] }) {
+  const nav = useNav()
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, margin: '12px 24px 0' }}>
+        {sessions.map((s, i) => {
+          const done = matched[i]
+          const isStr = s.kind === 'strength'
+          const accent = isStr ? 'var(--str)' : s.kind === 'bike' ? 'var(--text-2)' : 'var(--run)'
+          const stats = tileStats(plan, s, done)
+          const on = openIdx === i
+          return (
+            <div key={i} style={{ borderRadius: 18, background: 'var(--card)', border: `1px solid ${on ? accent : 'var(--line)'}`, padding: 12, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                <span className={`badge ${isStr ? 'str' : s.kind === 'bike' ? 'bike' : 'run'}`}>{isStr ? 'Kraft' : s.kind === 'bike' ? 'Rad' : 'Laufen'}</span>
+                {done && <span style={{ font: '600 11px var(--font)', color: accent }}>Erledigt</span>}
+              </div>
+              <div style={{ font: '700 17px/1.15 var(--font)', letterSpacing: '-.01em', marginTop: 8 }}>{s.title}</div>
+              <div style={{ font: '400 11px/1.35 var(--font)', color: 'var(--text-2)', marginTop: 3, minHeight: 30 }}>{shortInfo(plan, s)}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                {stats.map((t) => (
+                  <div key={t.l} style={{ flex: 1, minWidth: 0, borderRadius: 9, background: 'var(--tile)', border: '1px solid var(--line-2)', padding: '7px 4px', textAlign: 'center' }}>
+                    <div className="num" style={{ font: '700 14px/1 var(--font)', whiteSpace: 'nowrap' }}>{t.v}</div>
+                    <div style={{ font: '500 10px var(--font)', color: 'var(--text-2)', marginTop: 5, whiteSpace: 'nowrap' }}>{t.l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                <button onClick={() => setOpenIdx(on ? null : i)} style={{ flex: 1, height: 32, borderRadius: 9, background: on ? 'var(--line-2)' : 'var(--tile)', border: '1px solid var(--line-2)', font: '600 12px var(--font)' }}>
+                  {on ? 'Weniger' : 'Details'}
+                </button>
+                <button onClick={() => openLog(nav, date, s, done)} style={{ flex: 1, height: 32, borderRadius: 9, background: done ? 'var(--tile)' : 'var(--text)', color: done ? 'var(--text)' : 'var(--bg)', border: '1px solid var(--line-2)', font: '600 12px var(--font)' }}>
+                  {done ? 'Bearbeiten' : 'Eintragen'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {openIdx !== null && sessions[openIdx] && (
+        <SessionCard key={`${date}-${openIdx}`} plan={plan} date={date} session={sessions[openIdx]} done={matched[openIdx]} activities={activities} initialOpen />
+      )}
+    </>
+  )
+}
+
+/** Zwei Kennzahlen für die kompakte Kachel */
+function tileStats(plan: Plan, s: PlannedSession, done?: Activity): { v: string; l: string }[] {
+  if (s.kind === 'strength') {
+    if (done?.kind === 'strength') return [{ v: `${done.durationMin} Min`, l: 'Dauer' }, { v: String(countSets(done)), l: 'Sätze' }]
+    const ex = workoutById(plan, s.workoutId)?.exercises.filter((e) => !e.optional) ?? []
+    return [{ v: String(ex.length), l: 'Übungen' }, { v: String(ex.reduce((n, e) => n + plannedSets(e.sets, s), 0)), l: 'Sätze' }]
+  }
+  if (s.kind === 'bike') return [{ v: done && 'durationSec' in done ? String(Math.round(done.durationSec / 60)) : '30–45', l: 'Minuten' }, { v: '0 km', l: 'Wochen-km' }]
+  if (done?.kind === 'run') return [{ v: done.distanceKm ? `${fmtKm(done.distanceKm)} km` : '–', l: 'Distanz' }, runPaceTile(done)]
+  return [{ v: s.durationMin ? `${s.durationMin} Min` : '–', l: 'Dauer' }, { v: s.km ? `${fmtKm(s.km)} km` : '–', l: 'Distanz' }]
 }
 
 function runPaceTile(r: RunActivity): { v: string; l: string } {
@@ -253,7 +331,6 @@ function strengthTiles(plan: Plan, s: PlannedSession, done?: StrengthActivity) {
   return [
     { v: String(ex.length), l: 'Übungen' },
     { v: String(sets), l: 'Sätze' },
-    { v: s.setsFactor ? 'Deload' : s.setsOverride ? 'Rennwoche' : 'Normal', l: 'Umfang' },
   ]
 }
 

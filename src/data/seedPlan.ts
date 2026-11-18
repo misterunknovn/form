@@ -204,6 +204,7 @@ const WORKOUTS: StrengthWorkout[] = [
     id: 'ok-a',
     name: 'Oberkörper A',
     day: 'Montag, schwer, nach dem Lauf',
+    focus: 'Schwer',
     exercises: [
       { name: 'Latzug', muscle: 'ruecken', sets: 3, reps: '6–10', rir: '1–2', aliases: ['Latzug (MAG)', 'Latzug (Kabel)', 'Latzug (Kabelzug)'] },
       { name: 'Seitheben am Kabel', muscle: 'seitl_schulter', sets: 4, reps: '10–15', rir: '0–1', aliases: ['Einarmiges Seitheben (Kabelzug)', 'Single Arm Lateral Raise (Cable)'] },
@@ -217,6 +218,7 @@ const WORKOUTS: StrengthWorkout[] = [
     id: 'ok-b',
     name: 'Oberkörper B',
     day: 'Donnerstag',
+    focus: 'Rücken, Schultern und Bauch',
     exercises: [
       { name: 'Klimmzüge', muscle: 'ruecken', sets: 3, reps: '5–8', rir: '1–2', note: 'gewichtet', aliases: ['Klimmzug (Gewichtet)', 'Klimmzug'] },
       { name: 'Seitheben (KH)', muscle: 'seitl_schulter', sets: 4, reps: '12–20', rir: '0–1', aliases: ['Seitheben (Kurzhantel)', 'Seitheben im sitzen (Kurzhantel)', 'Seitheben sitzend (Kurzhantel)'] },
@@ -232,6 +234,7 @@ const WORKOUTS: StrengthWorkout[] = [
     id: 'uk-a',
     name: 'Unterkörper A',
     day: 'Mittwoch, schwer',
+    focus: 'Schwer, mit Armen',
     exercises: [
       { name: 'Beinbeuger', muscle: 'beine', sets: 2, reps: '8–12', rir: '1–2', aliases: ['Liegendes Beinbeugen (Maschine)', 'Beinbeugen sitzend', 'Beinbeugen sitzend (Maschine)'] },
       { name: 'Beinpresse', muscle: 'beine', sets: 3, reps: '4–6', rir: '2–3', aliases: ['Beinpresse oder Kniebeuge', 'Beinpresse sitzend', 'Beinpresse (Maschine)'] },
@@ -246,6 +249,7 @@ const WORKOUTS: StrengthWorkout[] = [
     id: 'uk-b',
     name: 'Unterkörper B',
     day: 'Freitag, Kraft und Belastbarkeit',
+    focus: 'Kraft und Belastbarkeit',
     note: 'Bulgarian Split Squat mit 2 Sätzen starten, nach zwei beschwerdefreien Wochen auf 3. Bei zu viel Muskelkater: hohes Step-up.',
     exercises: [
       { name: 'Bulgarian Split Squat', muscle: 'beine', sets: 2, setsMax: 3, reps: '4–6 pro Bein', rir: '3', note: 'oder hohes Step-up', aliases: ['Bulgarian Split Squat (Kurzhantel)', 'Bulgarischer Squat'] },
