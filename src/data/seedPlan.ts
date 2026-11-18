@@ -203,6 +203,7 @@ const WORKOUTS: StrengthWorkout[] = [
   {
     id: 'ok-a',
     name: 'Oberkörper A',
+    focus: 'Aufbau, Grundübungen',
     day: 'Montag, schwer, nach dem Lauf',
     exercises: [
       { name: 'Latzug', muscle: 'ruecken', sets: 3, reps: '6–10', rir: '1–2', aliases: ['Latzug (MAG)', 'Latzug (Kabel)', 'Latzug (Kabelzug)'] },
@@ -216,6 +217,7 @@ const WORKOUTS: StrengthWorkout[] = [
   {
     id: 'ok-b',
     name: 'Oberkörper B',
+    focus: 'Aufbau, Volumen',
     day: 'Donnerstag',
     exercises: [
       { name: 'Klimmzüge', muscle: 'ruecken', sets: 3, reps: '5–8', rir: '1–2', note: 'gewichtet', aliases: ['Klimmzug (Gewichtet)', 'Klimmzug'] },
@@ -231,6 +233,7 @@ const WORKOUTS: StrengthWorkout[] = [
   {
     id: 'uk-a',
     name: 'Unterkörper A',
+    focus: 'Maximalkraft, Muskelerhalt',
     day: 'Mittwoch, schwer',
     exercises: [
       { name: 'Beinbeuger', muscle: 'beine', sets: 2, reps: '8–12', rir: '1–2', aliases: ['Liegendes Beinbeugen (Maschine)', 'Beinbeugen sitzend', 'Beinbeugen sitzend (Maschine)'] },
@@ -245,6 +248,7 @@ const WORKOUTS: StrengthWorkout[] = [
   {
     id: 'uk-b',
     name: 'Unterkörper B',
+    focus: 'Laufkraft, Belastbarkeit',
     day: 'Freitag, Kraft und Belastbarkeit',
     note: 'Bulgarian Split Squat mit 2 Sätzen starten, nach zwei beschwerdefreien Wochen auf 3. Bei zu viel Muskelkater: hohes Step-up.',
     exercises: [

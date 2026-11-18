@@ -200,7 +200,7 @@ function SessionCard({ plan, date, session: s, done, activities }: { plan: Plan;
         </span>
       </div>
       <div className="big-title">{s.title}</div>
-      {sessionInfo(s) && <div className="desc">{sessionInfo(s)}</div>}
+      {sessionInfo(plan, s) && <div className="desc">{sessionInfo(plan, s)}</div>}
       <Tiles items={tiles} compact />
 
       <ActionRow
@@ -230,9 +230,9 @@ function openLog(nav: ReturnType<typeof useNav>, date: ISODate, s: PlannedSessio
   else nav.open({ kind: 'run', date, planned: s })
 }
 
-/** Kurzinfo unter dem Titel: bei Läufen die Beschreibung, bei Kraft keine (kompakter) */
-function sessionInfo(s: PlannedSession): string {
-  if (s.kind === 'strength') return ''
+/** Untertitel: bei Läufen die Beschreibung, bei Kraft der Schwerpunkt der Einheit */
+function sessionInfo(plan: Plan, s: PlannedSession): string {
+  if (s.kind === 'strength') return workoutById(plan, s.workoutId)?.focus ?? ''
   const time = s.time && !s.description?.toLowerCase().includes(s.time) ? ` ${cap(s.time)}.` : ''
   return `${s.description ?? ''}${time}`
 }

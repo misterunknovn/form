@@ -334,7 +334,7 @@ function SessionDetail({ initial, onBack }: { initial: number; onBack: () => voi
       <Card>
         <span className={`badge ${isStr ? 'str' : s.kind === 'bike' ? 'bike' : 'run'}`}>{isStr ? 'Kraft' : s.kind === 'bike' ? 'Rad' : 'Laufen'} · {dayName}</span>
         <div style={{ font: '700 26px/1.15 var(--font)', letterSpacing: '-.02em', marginTop: 12 }}>{s.title}</div>
-        <div className="desc" style={{ fontSize: 13, lineHeight: 1.5 }}>{s.description ?? wo?.day}{s.note ? ` ${s.note}` : ''}</div>
+        <div className="desc" style={{ fontSize: 13, lineHeight: 1.5 }}>{s.description ?? wo?.focus ?? wo?.day}{s.note && !isStr ? ` ${s.note}` : ''}</div>
         <Tiles items={isStr
           ? [
               { v: String(wo?.exercises.filter((e) => !e.optional).length ?? 0), l: 'Übungen' },

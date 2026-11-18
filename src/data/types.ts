@@ -99,6 +99,7 @@ export interface StrengthWorkout {
   id: string
   name: string
   day: string
+  focus?: string // Untertitel, z. B. "Laufkraft, Belastbarkeit"
   note?: string
   exercises: ExerciseTemplate[]
 }
