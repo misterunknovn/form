@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useData } from '../data/store'
 import type { Activity, ISODate, Plan, PlannedSession, RunActivity, StrengthActivity, StrengthWorkout } from '../data/types'
 import { useNav } from '../App'
-import { Card, Delta, Dot, Empty, Header, Tiles, Toggle } from '../components/ui'
+import { Card, Delta, Empty, Header, Tiles, Toggle } from '../components/ui'
 import { IconToday } from '../components/icons'
 import { BackupReminder } from './Settings'
 import {
@@ -31,7 +31,8 @@ export function Today() {
   const acts = dayActs(sel)
   const { matched, extra } = matchSessions(sessions, acts)
   const count = sessions.length + extra.length
-  const rules = rulesFor(plan, sel)
+  // Wochenhinweis (Deload, Testwoche, Rennwoche) unter der Wochenleiste
+  const weekRules = rulesFor(plan, sel).filter((r) => r.trigger === 'deload_week' || r.trigger === 'test_week' || r.trigger === 'race_week')
 
   return (
     <div className="screen">
@@ -78,6 +79,16 @@ export function Today() {
         <Summary label="KRAFT" v={String(strDone)} of={String(strPlanned)} p={strPlanned ? strDone / strPlanned : 0} color="var(--str)" />
       </div>
 
+      {weekRules.length > 0 && (
+        <div style={{ margin: '8px 24px 0', padding: '9px 12px', borderRadius: 12, background: 'var(--card-dim)', border: '1px dashed var(--line-2)' }}>
+          {weekRules.map((r) => (
+            <div key={r.id} style={{ font: '400 12px/1.45 var(--font)', color: 'var(--text-2)' }}>
+              <b style={{ color: 'var(--text)', fontWeight: 600 }}>{r.title}.</b> {r.text}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="day-head">
         <b>{sel === today ? fmtDayLong(sel) : fmtDayLong(sel)}</b>
         <span>{count === 0 ? 'Ruhetag' : count === 1 ? '1 Einheit' : `${count} Einheiten`}</span>
@@ -102,25 +113,6 @@ export function Today() {
       {extra.map((a) => (
         <ExtraCard key={a.id} a={a} />
       ))}
-
-      {rules.length > 0 && (
-        <Card>
-          <div className="card-head">
-            <span className="card-title">Hinweise aus deinem Plan</span>
-            {week?.label && <span className="card-aside">{week.label}</span>}
-          </div>
-          <div className="rows" style={{ marginTop: 6 }}>
-            {rules.map((r) => (
-              <div key={r.id} style={{ display: 'flex', gap: 10, padding: '9px 0' }}>
-                <Dot color="var(--text-2)" />
-                <div style={{ font: '400 12px/1.5 var(--font)', color: 'var(--text-2)', marginTop: -4 }}>
-                  <b style={{ color: 'var(--text)', fontWeight: 600 }}>{r.title}.</b> {r.text}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
 
       <Tomorrow plan={plan} date={sel} onSelect={setSel} />
       <BackupReminder />
@@ -353,12 +345,16 @@ function compareText(done: RunActivity, prev: RunActivity): string {
 }
 
 function StrengthDetails({ plan, s, date, done, activities }: { plan: Plan; s: PlannedSession; date: ISODate; done?: StrengthActivity; activities: Activity[] }) {
+  const { today } = useData()
   const wo = workoutById(plan, s.workoutId)
   if (!wo) return null
   const prevSession = byDateDesc(activities.filter(isStrength)).find((a) => a.date < date && a.workoutId === s.workoutId)
   return (
     <>
-      <div className="section-label">Übungen</div>
+      <div className="section-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span>Übungen</span>
+        <span>{done ? (date === today ? 'Heute' : 'Gewicht') : 'Zuletzt'}</span>
+      </div>
       <div className="rows">
         {(done ? doneRows(wo, done) : planRows(wo, s, date, activities)).map((r) => (
           <div key={r.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: 8, alignItems: 'center', padding: '9px 0', opacity: r.dim ? 0.5 : 1 }}>
