@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { useNav } from '../App'
 import { useData } from '../data/store'
 import { countExisting, exportBackup, importBackup, planHistory, saveActivities, savePlan, undoPlan, updateSettings, type Backup } from '../data/db'
 import { importCsv, summarize, type CsvImport } from '../lib/importCsv'
@@ -259,24 +258,6 @@ function SettingRow({ label, sub, onClick }: { label: string; sub: string; onCli
       </div>
       <span style={{ color: 'var(--faint)' }}>›</span>
     </button>
-  )
-}
-
-/** Hinweis auf „Heute“, wenn die letzte Sicherung länger als 14 Tage her ist */
-export function BackupReminder() {
-  const { tab } = useNav()
-  const { activities, settings, toast } = useData()
-  if (tab !== 'heute' || activities.length < 3) return null
-  const last = settings.lastBackup ?? 0
-  if (Date.now() - last < 14 * 86400000) return null
-  return (
-    <div className="card dashed" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ font: '600 13px var(--font)' }}>{last ? 'Sicherung ist über 2 Wochen alt' : 'Noch keine Sicherung'}</div>
-        <div style={{ font: '400 11px var(--font)', color: 'var(--text-2)', marginTop: 2 }}>Deine Daten liegen nur auf diesem iPhone.</div>
-      </div>
-      <button className="pill today" onClick={() => runBackup(toast)}>Sichern</button>
-    </div>
   )
 }
 

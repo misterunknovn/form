@@ -4,7 +4,6 @@ import type { Activity, ISODate, Plan, PlannedSession, RunActivity, StrengthActi
 import { useNav } from '../App'
 import { Card, Delta, Empty, Header, Tiles, Toggle } from '../components/ui'
 import { IconToday } from '../components/icons'
-import { BackupReminder } from './Settings'
 import {
   addDays, DAY_SHORT, fmtDayLong, fmtDayShort, fmtDotDate, fmtWeekRange, fromISO, mondayOf, weekdayIndex,
 } from '../lib/dates'
@@ -80,10 +79,11 @@ export function Today() {
       </div>
 
       {weekRules.length > 0 && (
-        <div style={{ margin: '8px 24px 0', padding: '9px 12px', borderRadius: 12, background: 'var(--card-dim)', border: '1px dashed var(--line-2)' }}>
+        <div style={{ margin: '8px 24px 0', padding: '10px 12px', borderRadius: 12, background: 'rgba(255, 184, 107, 0.1)', border: '1px solid rgba(255, 184, 107, 0.4)' }}>
           {weekRules.map((r) => (
-            <div key={r.id} style={{ font: '400 12px/1.45 var(--font)', color: 'var(--text-2)' }}>
-              <b style={{ color: 'var(--text)', fontWeight: 600 }}>{r.title}.</b> {r.text}
+            <div key={r.id} style={{ display: 'flex', gap: 8, font: '400 12px/1.45 var(--font)', color: 'var(--text)' }}>
+              <i style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--warn)', flex: 'none', marginTop: 6 }} />
+              <span><b style={{ color: 'var(--warn)', fontWeight: 600 }}>{r.title}.</b> {r.text}</span>
             </div>
           ))}
         </div>
@@ -115,7 +115,6 @@ export function Today() {
       ))}
 
       <Tomorrow plan={plan} date={sel} onSelect={setSel} />
-      <BackupReminder />
     </div>
   )
 }
