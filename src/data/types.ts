@@ -99,7 +99,6 @@ export interface StrengthWorkout {
   id: string
   name: string
   day: string
-  focus?: string // Art der Einheit, z. B. "Kraft und Belastbarkeit"
   note?: string
   exercises: ExerciseTemplate[]
 }
