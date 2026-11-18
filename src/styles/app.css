@@ -244,4 +244,8 @@ input, textarea, select { font: inherit; color: inherit; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 .grow { transform-origin: bottom; animation: grow 0.2s ease-out; }
+.slide-next { animation: slide-next 0.2s ease-out; }
+.slide-prev { animation: slide-prev 0.2s ease-out; }
+@keyframes slide-next { from { transform: translateX(28px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slide-prev { from { transform: translateX(-28px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

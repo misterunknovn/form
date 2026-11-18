@@ -6,6 +6,7 @@ import { WEEKDAYS } from '../data/types'
 import { Card, CardHead, CardLink, Dot, Header, Segmented, SubHeader, Tiles } from '../components/ui'
 import { IconPlan, IconSpark } from '../components/icons'
 import { PlanBars } from '../components/charts'
+import { useSwipe } from '../components/swipe'
 import { DAY_SHORT, diffDays, fmtDate, fmtDayShort, fromISO, MONTH_SHORT } from '../lib/dates'
 import { fmtKm } from '../lib/format'
 import { phaseFor, plannedSets, plannedSetsTotal, sessionDate, weekFor, weekIndex, weekRunKm, weekStrengthSets, workoutById } from '../lib/plan'
@@ -226,8 +227,10 @@ function Phases({ initial, onBack }: { initial: 'run' | 'strength'; onBack: () =
       ? w.sessions.filter((s) => s.kind === 'run' && s.runType !== 'easy').map((s) => (s.steps?.find((x) => x.key)?.name ?? `${s.title}${s.km ? ` ${fmtKm(s.km)} km` : ''}`).replace(' Min', '′')).join(' · ')
       : w.sessions.filter((s) => s.kind === 'strength').map((s) => `${s.title.replace('Oberkörper', 'OK').replace('Unterkörper', 'UK')}${s.setsFactor || s.setsOverride ? '*' : ''}`).join(' · ')
 
+  const swipe = useSwipe(() => switchKind('strength'), () => switchKind('run'))
+
   return (
-    <div className="screen">
+    <div className="screen" {...swipe}>
       <SubHeader kicker="Plan" title="Phasen im Detail" onBack={onBack} />
       <Segmented tone={tone} value={kind} onChange={switchKind} options={[{ id: 'run', label: 'Laufen' }, { id: 'strength', label: 'Kraft' }]} />
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '12px 24px 2px', scrollbarWidth: 'none' }}>

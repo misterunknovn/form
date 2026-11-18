@@ -4,6 +4,7 @@ import type { Activity, ISODate, Plan, PlannedSession, RunActivity, StrengthActi
 import { useNav } from '../App'
 import { Card, Delta, Empty, Header, Tiles } from '../components/ui'
 import { IconToday } from '../components/icons'
+import { useSwipe } from '../components/swipe'
 import {
   addDays, DAY_SHORT, fmtDayLong, fmtDayShort, fmtDotDate, fmtWeekRange, fromISO, mondayOf, weekdayIndex,
 } from '../lib/dates'
@@ -15,6 +16,14 @@ export function Today() {
   const { plan, activities, today } = useData()
   const nav = useNav()
   const [sel, setSel] = useState<ISODate>(today)
+  const [dir, setDir] = useState<1 | -1>(1)
+  const selectDay = (d: ISODate) => {
+    if (d === sel) return
+    setDir(d > sel ? 1 : -1)
+    setSel(d)
+  }
+  // Wisch nach links: nächster Tag, nach rechts: vorheriger Tag
+  const swipe = useSwipe(() => selectDay(addDays(sel, 1)), () => selectDay(addDays(sel, -1)))
   const monday = mondayOf(sel)
   const week = weekFor(plan, sel)
 
@@ -34,16 +43,16 @@ export function Today() {
   const weekRules = rulesFor(plan, sel).filter((r) => r.trigger === 'deload_week' || r.trigger === 'test_week' || r.trigger === 'race_week')
 
   return (
-    <div className="screen">
+    <div className="screen" {...swipe}>
       <Header icon={<IconToday size={28} color="#f2f4f4" />} title="Heute" onPlus={() => nav.open({ kind: 'add' })} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px 0', font: '500 15px var(--font)' }}>
-        <button style={{ color: 'var(--muted)', padding: '0 8px' }} onClick={() => setSel(addDays(sel, -7))} aria-label="Vorige Woche">‹</button>
+        <button style={{ color: 'var(--muted)', padding: '0 8px' }} onClick={() => selectDay(addDays(sel, -7))} aria-label="Vorige Woche">‹</button>
         <span>
           <b style={{ fontWeight: 600 }}>{monday === mondayOf(today) ? 'Aktuelle Woche' : week?.label ? week.label : `Woche ${weekIndex(plan, sel) + 1 || '–'}`}</b>
           <span style={{ color: 'var(--muted)', marginLeft: 8 }}>{fmtWeekRange(monday)}</span>
         </span>
-        <button style={{ color: 'var(--muted)', padding: '0 8px' }} onClick={() => setSel(addDays(sel, 7))} aria-label="Nächste Woche">›</button>
+        <button style={{ color: 'var(--muted)', padding: '0 8px' }} onClick={() => selectDay(addDays(sel, 7))} aria-label="Nächste Woche">›</button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px 0', font: '500 13px var(--font)', color: 'var(--muted)' }}>
@@ -57,7 +66,7 @@ export function Today() {
           const doneKinds = new Set(da.map((a) => (a.kind === 'strength' ? 'strength' : 'run')))
           for (const k of doneKinds) if (!kinds.includes(k as 'run' | 'strength')) kinds.push(k as 'run' | 'strength')
           return (
-            <button key={d} onClick={() => setSel(d)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }} aria-label={fmtDayLong(d)}>
+            <button key={d} onClick={() => selectDay(d)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }} aria-label={fmtDayLong(d)}>
               <span style={{ width: 30, height: 30, borderRadius: 15, display: 'grid', placeItems: 'center', background: isSel ? 'var(--text)' : 'transparent', boxShadow: isToday && !isSel ? 'inset 0 0 0 1.5px var(--run)' : 'none', color: isSel ? 'var(--bg)' : isToday ? 'var(--run)' : 'var(--muted)', fontWeight: isSel || isToday ? 600 : 500 }}>{label}</span>
               <div style={{ display: 'flex', gap: 3 }}>
                 {kinds.length === 0 && <i className="dot" style={{ background: 'var(--dot-off)' }} />}
@@ -89,6 +98,7 @@ export function Today() {
         </div>
       )}
 
+      <div key={sel} className={dir > 0 ? 'slide-next' : 'slide-prev'}>
       <div className="day-head">
         <b>{sel === today ? fmtDayLong(sel) : fmtDayLong(sel)}</b>
         <span>{count === 0 ? 'Ruhetag' : count === 1 ? '1 Einheit' : `${count} Einheiten`}</span>
@@ -114,7 +124,8 @@ export function Today() {
         <ExtraCard key={a.id} a={a} />
       ))}
 
-      <Tomorrow plan={plan} date={sel} onSelect={setSel} />
+      <Tomorrow plan={plan} date={sel} onSelect={selectDay} />
+      </div>
     </div>
   )
 }

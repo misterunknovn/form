@@ -23,12 +23,18 @@ export function MonthAxis({ starts }: { starts: ISODate[] }) {
   )
 }
 
+/** Obergrenze der Achse: mindestens 20 km, sonst die größte Woche plus etwas Luft, auf 10 km aufgerundet */
+export function niceTop(max: number): number {
+  return Math.max(20, Math.ceil((max * 1.05) / 10) * 10)
+}
+
 /** Wochenumfang: Säule = Wochen-km, innen der längste Lauf; aktuelle Woche hervorgehoben */
 export function WeeklyBars({ weeks, avg }: { weeks: { start: ISODate; km: number; longest: number }[]; avg: number }) {
-  const max = Math.max(20, ...weeks.map((w) => w.km), avg) * 1.1
-  const top = Math.ceil(max / 20) * 20
-  const H = 92
-  const ticks = [top, (top * 2) / 3, top / 3].map((t) => Math.round(t))
+  // Achse passt sich dem Umfang an: knapp über der größten Woche, auf 10 km gerundet
+  const top = niceTop(Math.max(...weeks.map((w) => w.km), avg))
+  const H = 120
+  const tickStep = top <= 40 ? 10 : 20
+  const ticks = Array.from({ length: Math.floor(top / tickStep) }, (_, i) => (i + 1) * tickStep).reverse()
   return (
     <div style={{ marginTop: 16 }}>
       <div style={{ position: 'relative', height: H, display: 'flex' }}>

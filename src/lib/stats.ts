@@ -228,7 +228,7 @@ export function intensity(acts: Activity[], from: ISODate, to: ISODate) {
   const easy = km(['easy'])
   const long = km(['long'])
   const thr = km(['schwelle'])
-  const intv = km(['intervall', 'test', 'rennen'])
+  const intv = km(['intervall']) // Tests und Rennen zählen hier nicht mit
   const total = easy + long + thr + intv
   return { easy, long, thr, intv, total }
 }

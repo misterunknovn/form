@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNav } from '../App'
 import { useData } from '../data/store'
 import { MUSCLES, type Muscle } from '../data/types'
@@ -6,6 +5,7 @@ import { Card, CardHead, Delta, Dot, Empty, Header, Segmented, Tiles } from '../
 import { HeaderStrength } from '../components/icons'
 import { CalendarHeatmap, MonthAxis, RangeMeter, Sparkline, ValueBars } from '../components/charts'
 import { CurrentPlanCard, RecentCard } from '../components/shared'
+import { useSegments } from '../components/swipe'
 import { addDays, fmtDate, fmtDotDate, mondayOf, MONTH_SHORT } from '../lib/dates'
 import { fmtKg, fmtNum } from '../lib/format'
 import { weekFor, weekStrengthSets } from '../lib/plan'
@@ -18,14 +18,16 @@ type Seg = 'volumen' | 'muskeln' | 'daten'
 
 export function Strength() {
   const nav = useNav()
-  const [seg, setSeg] = useState<Seg>('volumen')
+  const { seg, go, swipe, slide } = useSegments<Seg>(['volumen', 'muskeln', 'daten'], 'volumen')
   return (
-    <div className="screen">
+    <div className="screen" {...swipe}>
       <Header icon={<HeaderStrength />} title="Kraft" onPlus={() => nav.open({ kind: 'add' })} />
-      <Segmented tone="str" value={seg} onChange={setSeg} options={[{ id: 'volumen', label: 'Volumen' }, { id: 'muskeln', label: 'Muskeln' }, { id: 'daten', label: 'Daten' }]} />
-      {seg === 'volumen' && <Volume />}
-      {seg === 'muskeln' && <Muscles />}
-      {seg === 'daten' && <DataTab />}
+      <Segmented tone="str" value={seg} onChange={go} options={[{ id: 'volumen', label: 'Volumen' }, { id: 'muskeln', label: 'Muskeln' }, { id: 'daten', label: 'Daten' }]} />
+      <div key={seg} className={slide}>
+        {seg === 'volumen' && <Volume />}
+        {seg === 'muskeln' && <Muscles />}
+        {seg === 'daten' && <DataTab />}
+      </div>
     </div>
   )
 }

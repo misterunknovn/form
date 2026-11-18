@@ -7,6 +7,7 @@ import { Card, CardHead, CardLink, Delta, Dot, Empty, Header, ProgressBar, Segme
 import { HeaderRun } from '../components/icons'
 import { CalendarHeatmap, Sparkline, WeeklyBars } from '../components/charts'
 import { CurrentPlanCard, RecentCard } from '../components/shared'
+import { useSegments } from '../components/swipe'
 import { addDays, fmtDate, fromISO, mondayOf, MONTH_SHORT } from '../lib/dates'
 import { fmtDuration, fmtHours, fmtKm, fmtNum, fmtPace, parseNum, uid } from '../lib/format'
 import { aRace } from '../lib/plan'
@@ -20,14 +21,16 @@ type Seg = 'volumen' | 'leistung' | 'daten'
 
 export function Running() {
   const nav = useNav()
-  const [seg, setSeg] = useState<Seg>('volumen')
+  const { seg, go, swipe, slide } = useSegments<Seg>(['volumen', 'leistung', 'daten'], 'volumen')
   return (
-    <div className="screen">
+    <div className="screen" {...swipe}>
       <Header icon={<HeaderRun />} title="Laufen" onPlus={() => nav.open({ kind: 'add' })} />
-      <Segmented value={seg} onChange={setSeg} options={[{ id: 'volumen', label: 'Volumen' }, { id: 'leistung', label: 'Leistung' }, { id: 'daten', label: 'Daten' }]} />
-      {seg === 'volumen' && <Volume />}
-      {seg === 'leistung' && <Performance />}
-      {seg === 'daten' && <DataTab />}
+      <Segmented value={seg} onChange={go} options={[{ id: 'volumen', label: 'Volumen' }, { id: 'leistung', label: 'Leistung' }, { id: 'daten', label: 'Daten' }]} />
+      <div key={seg} className={slide}>
+        {seg === 'volumen' && <Volume />}
+        {seg === 'leistung' && <Performance />}
+        {seg === 'daten' && <DataTab />}
+      </div>
     </div>
   )
 }
@@ -151,12 +154,13 @@ function Progress({ v, tests, race, totalKm }: { v: ReturnType<typeof currentVdo
 function IntensityBlock({ it }: { it: ReturnType<typeof intensity> }) {
   const easyP = ((it.easy + it.long) / it.total) * 100
   const hardP = 100 - easyP
+  // nach Anteil absteigend sortiert
   const rows = [
     { n: 'Easy Runs', km: it.easy, c: 'var(--run-deep)' },
     { n: 'Long Runs', km: it.long, c: 'var(--run-mid)' },
     { n: 'Schwelle', km: it.thr, c: 'var(--run)' },
-    { n: 'Intervall & Tests', km: it.intv, c: 'var(--run-light)' },
-  ]
+    { n: 'Intervalle', km: it.intv, c: 'var(--run-light)' },
+  ].sort((a, b) => b.km - a.km)
   const verdict = easyP >= 75 ? `Gut verteilt: ${Math.round(easyP)} % locker, ${Math.round(hardP)} % hart. Die harten Einheiten bleiben gezielt.` : `Nur ${Math.round(easyP)} % locker. Ziel sind rund 80 %: halte Easy Runs und Long Runs wirklich in der Easy-Zone.`
   return (
     <>
